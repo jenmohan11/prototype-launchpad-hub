@@ -1,0 +1,977 @@
+<title>Launch Pad Project Page</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: roadmap strip, three-card header (project, pad status, settings), full-width Status Monitor, then Slack panel beside the Artifacts list. */
+:root{
+  --bg:#EEF1F4; --surface:#FFFFFF; --surface-2:#F5F7F9; --ink:#12202C; --muted:#586775; --line:#D3DAE1;
+  --accent:#1F4FD8; --accent-ink:#FFFFFF; --accent-soft:#E3EAFB;
+  --crit:#B42626; --crit-soft:#FBE8E8; --warn:#8F5A00; --warn-soft:#FAEFD9; --ok:#18763F; --ok-soft:#DFF2E7;
+  --font-display:'Bricolage Grotesque','Segoe UI',system-ui,sans-serif;
+  --font-body:'IBM Plex Sans','Segoe UI',system-ui,sans-serif;
+  --font-mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D1319; --surface:#151D25; --surface-2:#1B252F; --ink:#E5EBF0; --muted:#93A2B0; --line:#28343F;
+    --accent:#7C9DFF; --accent-ink:#0B1220; --accent-soft:#1D2A4A;
+    --crit:#FF8B8B; --crit-soft:#3A1F22; --warn:#F0B759; --warn-soft:#352A14; --ok:#63D08F; --ok-soft:#173022;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D1319; --surface:#151D25; --surface-2:#1B252F; --ink:#E5EBF0; --muted:#93A2B0; --line:#28343F;
+  --accent:#7C9DFF; --accent-ink:#0B1220; --accent-soft:#1D2A4A;
+  --crit:#FF8B8B; --crit-soft:#3A1F22; --warn:#F0B759; --warn-soft:#352A14; --ok:#63D08F; --ok-soft:#173022;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:14px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+.wrap{max-width:1240px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+h1,h2,h3{font-family:var(--font-display);margin:0;text-wrap:balance;letter-spacing:-0.01em}
+h2{font-size:18px}
+h3{font-size:15px}
+p{margin:0}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.mono{font-family:var(--font-mono)}
+.eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.muted{color:var(--muted)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;min-width:0}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:7px;padding:7px 12px;font-weight:500;font-size:13px}
+.btn:hover:not(:disabled){border-color:var(--muted)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.ticks i{font-style:normal}
+.ticks .ls{display:none}@media(max-width:600px){.ticks .lf{display:none}.ticks .ls{display:inline}}
+.btn{text-decoration:none;display:inline-block;color:inherit}
+a.btn:hover{text-decoration:underline}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.ok{background:var(--ok);border-color:var(--ok);color:#fff}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .btn.ok{color:#08140D}}
+:root[data-theme="dark"] .btn.ok{color:#08140D}
+.btn.warn{color:var(--warn);border-color:var(--warn)}
+.btn.crit{color:var(--crit);border-color:var(--crit)}
+.btn.small{padding:4px 9px;font-size:12px}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:7px 9px;width:100%;min-width:0}
+textarea{resize:vertical;min-height:72px}
+label{display:block;font-size:12px;font-weight:600;margin-bottom:4px}
+.field{display:flex;flex-direction:column;min-width:0}
+.pill{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:11px;border-radius:99px;padding:2px 9px;border:1px solid var(--line);background:var(--surface-2);white-space:nowrap}
+.pill::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--muted)}
+.pill.blocker{color:var(--crit);background:var(--crit-soft);border-color:transparent}.pill.blocker::before{background:var(--crit)}
+.pill.requirement_change{color:var(--accent);background:var(--accent-soft);border-color:transparent}.pill.requirement_change::before{background:var(--accent)}
+.pill.milestone{color:var(--ok,#1a7f4b);background:var(--ok-soft,#e3f4ea);border-color:transparent}.pill.milestone::before{background:var(--ok,#1a7f4b)}
+.pill.feedback{color:var(--warn);background:var(--warn-soft);border-color:transparent}.pill.feedback::before{background:var(--warn)}
+.pill.comment{color:var(--muted)}
+.pill.plain::before{display:none}
+.pill.fresh{color:var(--ok);background:var(--ok-soft);border-color:transparent}.pill.fresh::before{background:var(--ok)}
+.chip{font-size:12px;border:1px solid var(--line);border-radius:6px;padding:2px 8px;background:var(--surface-2);color:var(--muted)}
+button.chip{cursor:pointer}
+button.chip[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent);border-color:transparent;font-weight:600}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.stack{display:flex;flex-direction:column;gap:12px}
+
+/* header */
+.head{display:grid;grid-template-columns:1fr 1.5fr;gap:16px}
+.proj h1{font-size:26px;line-height:1.1;margin:6px 0 10px}
+.meta{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:13px}
+.meta dt{color:var(--muted)}.meta dd{margin:0;min-width:0}
+.pad h2{margin-bottom:2px}
+.track-wrap{position:relative;padding-top:30px;margin:10px 4px 0}
+.marker{position:absolute;top:0;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;transition:left .5s ease}
+.marker b{font-family:var(--font-mono);font-size:12px;background:var(--ink);color:var(--bg);border-radius:5px;padding:1px 7px}
+.marker i{width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:7px solid var(--ink)}
+.track{height:12px;border-radius:99px;background:linear-gradient(90deg,#D2402F 0%,#E8A317 50%,#2E9E5B 100%);position:relative}
+.track::after{content:"";position:absolute;inset:0;border-radius:99px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
+.ticks{position:relative;height:30px;margin-top:6px}
+.ticks span{position:absolute;font-family:var(--font-mono);font-size:10.5px;color:var(--muted);white-space:nowrap}
+.ticks span::before{content:"";position:absolute;top:-8px;left:50%;width:1px;height:6px;background:var(--line)}
+.ticks span:first-child{transform:none}.ticks span:last-child{transform:translateX(-100%)}
+.ticks span:first-child::before{left:0}.ticks span:last-child::before{left:100%}
+.note-small{font-size:12px;color:var(--muted)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface-2)}
+.seg button{border:0;background:none;padding:6px 10px;font-size:12.5px;font-weight:500}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+
+
+/* top bar, project switcher, settings drawer */
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.topbar-right{display:flex;gap:8px;flex-wrap:wrap}
+.topbar-left{display:flex;align-items:center;gap:10px;min-width:0}
+.brand{font-family:var(--font-display);font-weight:700;font-size:17px;letter-spacing:-0.01em}
+.sep{color:var(--line)}
+.switcher{position:relative;min-width:0}
+.switch-btn{display:flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 12px;font-weight:600;max-width:100%}
+.switch-btn span.nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.switch-btn svg{flex:none}
+.menu{position:absolute;top:calc(100% + 6px);left:0;z-index:15;width:min(380px,calc(100vw - 32px));background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:6px;box-shadow:0 12px 32px rgba(10,20,30,.18)}
+.menu .eyebrow{display:block;padding:6px 10px 4px}
+.menu-item{width:100%;text-align:left;border:0;background:none;border-radius:7px;padding:9px 10px;display:grid;grid-template-columns:1fr auto;gap:2px 12px;align-items:baseline}
+.menu-item:hover{background:var(--surface-2)}
+.menu-item[aria-current="true"]{background:var(--accent-soft)}
+.menu-item .nm{font-weight:600}
+.menu-item .sub{font-size:12px;color:var(--muted)}
+.menu-item .stat{font-family:var(--font-mono);font-size:12px;text-align:right}
+.set-btn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 12px;font-weight:500}
+.set-btn small{color:var(--muted);font-size:12px}
+.drawer-backdrop{position:fixed;inset:0;background:rgba(10,16,22,.5);z-index:30}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(480px,100vw);background:var(--surface);border-left:1px solid var(--line);z-index:31;overflow:auto;
+  padding-top:max(16px,env(safe-area-inset-top,0px));padding-bottom:max(16px,env(safe-area-inset-bottom,0px));padding-left:16px;padding-right:max(16px,env(safe-area-inset-right,0px))}
+.modal{position:fixed;z-index:31;left:50%;top:max(16px,env(safe-area-inset-top,0px));transform:translateX(-50%);width:min(580px,calc(100vw - 32px));max-height:calc(100% - 32px);overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px}
+.drawer-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}
+.drawer section+section{margin-top:22px}
+.drawer h3{margin-bottom:8px}
+
+/* tables */
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
+th{font-family:var(--font-mono);font-size:11px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+td.y{color:var(--ok);font-weight:600}td.n{color:var(--muted)}
+.tablewrap{overflow-x:auto}
+ul.plain{list-style:none;margin:0;padding:0}
+ul.plain li{padding:6px 0;border-bottom:1px solid var(--line);display:flex;gap:8px;justify-content:space-between;align-items:baseline}
+
+/* status monitor */
+.monitor-head{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start}
+.summary{font-size:15.5px;line-height:1.55;max-width:80ch;margin:10px 0 14px}
+.counts{display:flex;gap:8px;flex-wrap:wrap}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-top:14px;overflow-x:auto}
+.tabs button{border:0;background:none;padding:8px 12px;font-weight:500;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.filters{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0}
+.items{display:flex;flex-direction:column}
+.item{border-bottom:1px solid var(--line)}
+.item-top{width:100%;text-align:left;border:0;background:none;padding:12px 4px;display:grid;grid-template-columns:150px 1fr auto;gap:12px;align-items:start}
+.item-top:hover{background:var(--surface-2)}
+.item-title{font-weight:600}
+.item-sub{font-size:12.5px;color:var(--muted)}
+.item-body{padding:4px 4px 18px 4px;display:grid;grid-template-columns:1.3fr 1fr;gap:20px}
+.item-body h4{font-family:var(--font-mono);font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin:0 0 6px;font-weight:500}
+.item-body ul{margin:0;padding-left:18px}
+.item-body li{margin-bottom:4px}
+.decision{background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:12px}
+.empty{padding:28px 8px;color:var(--muted)}
+.run{border:1px solid var(--line);background:var(--surface-2);border-radius:8px;padding:10px 12px;margin-top:12px;font-family:var(--font-mono);font-size:12px}
+.run li{padding:2px 0}
+.run .sim{color:var(--muted)}
+.run .mode{margin-top:6px;color:var(--muted)}
+details>summary{cursor:pointer;color:var(--muted);font-size:12.5px}
+blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);color:var(--muted);font-size:13px;background:var(--surface-2);border-radius:0 6px 6px 0}
+
+/* lower */
+.lower{display:grid;grid-template-columns:minmax(260px,340px) 1fr;gap:16px;align-items:start}
+.slack h2{margin-bottom:2px}
+.chan{padding:12px 0;border-top:1px solid var(--line)}
+.chan:first-of-type{border-top:0}
+.chan-name{font-family:var(--font-mono);font-weight:500;font-size:13px}
+.next{margin-top:6px;font-size:13px}
+.next b{font-weight:600}
+.art{border:1px solid var(--line);border-radius:8px;background:var(--surface);margin-top:8px}
+.art>button{width:100%;text-align:left;border:0;background:none;padding:11px 14px;display:flex;justify-content:space-between;gap:12px;align-items:baseline}
+.art>button span:first-child{font-weight:600}
+.art-body{padding:2px 14px 16px;border-top:1px solid var(--line)}
+.art-body>*+*{margin-top:12px}
+.art-body:first-child{padding-top:14px}
+.req{padding:8px 0;border-bottom:1px solid var(--line);display:flex;gap:10px;justify-content:space-between;align-items:baseline}
+.req .mono{color:var(--muted);font-size:12px;flex:none}
+.log{padding:10px 0;border-bottom:1px solid var(--line)}
+.log-head{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.toast{z-index:40;position:fixed;left:50%;transform:translateX(-50%);bottom:max(18px,env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-size:13px;max-width:min(560px,calc(100vw - 32px))}
+@media (max-width:980px){
+  .head{grid-template-columns:1fr}
+  .lower{grid-template-columns:1fr}
+  .item-body{grid-template-columns:1fr}
+}
+@media (max-width:560px){
+  .grid2{grid-template-columns:1fr}
+  .item-top{grid-template-columns:1fr auto}
+  .item-top .pill{grid-column:1 / -1;justify-self:start}
+  .proj h1{font-size:23px}
+}
+@media (prefers-reduced-motion:reduce){.marker{transition:none}}
+</style>
+
+<div class="wrap">
+  <nav class="topbar" id="sec-nav" aria-label="Project navigation"></nav>
+
+  <header class="head">
+    <section class="panel proj" id="sec-project"></section>
+    <section class="panel pad" id="sec-progress"></section>
+  </header>
+
+  <section class="panel" id="sec-monitor"></section>
+
+  <div class="lower">
+    <section class="panel slack" id="sec-slack"></section>
+    <section class="panel" id="sec-artifacts"></section>
+  </div>
+</div>
+<div id="sec-drawer"></div>
+<div id="sec-modal"></div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+(function(){
+  var KEY='launchpad-proto-v3';
+  var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
+  var $=function(s){return document.querySelector(s)};
+  var sleep=function(ms){return new Promise(function(r){setTimeout(r,ms)})};
+  var MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  function fmtDay(s){ var m=/^(\d{4})-(\d{2})-(\d{2})/.exec(s||''); return m? MONTHS[+m[2]-1]+' '+(+m[3])+', '+m[1] : (s||''); }
+  function fmtStamp(iso){ try{ var d=new Date(iso); return d.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}); }catch(e){ return iso; } }
+  function slug(s){ return String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,''); }
+  function ymd(s){ return String(s||'').replace(/-/g,'').slice(0,8); }
+  function plural(n,one,many){ return n+' '+(n===1?one:(many||one+'s')); }
+
+  var TYPE_LABEL={blocker:'Blocker',requirement_change:'Requirement change',feedback:'Feedback card',comment:'Comment',milestone:'Milestone'};
+  var TYPE_ORDER={blocker:0,milestone:0.5,requirement_change:1,feedback:2,comment:3};
+  var PRIO_ORDER={high:0,medium:1,low:2};
+  var SECTIONS=['Summary','Next Steps','Requirements','Statement of Value','Stakeholder Feedback','Risks & Blockers','Timeline','Jira','Slack'];
+  var PERSONAS={admin:'Admin (PM)',dev:'Dev',business:'Business'};
+
+  var SAMPLE_NOTE={
+    title:'Reporting Manager weekly sync', date:'2026-10-08',
+    text:'Reporting Manager weekly sync, Oct 8 2026. Attendees: PM, dev lead, data lead, sales lead, client manager.\n\nPM: The client manager says Client B needs scheduled reports by the end of October, so I want to pull the beta forward to Oct 28.\n\nDev lead: That is tight. The builder and email scheduling work, but PDF export is not ready. We could run the beta with CSV only.\n\nData lead: Queries over 90 days still time out. We should cap custom date ranges at 90 days for the beta.\n\nSales lead: Clients also want to filter a report by campaign. That can wait until after the beta if we have to.\n\nClient manager: Please add a read-only share link so Client B can show reports to its executives.\n\nPM: Agreed on Oct 28 as a proposal. Dev lead, please confirm by Friday whether Oct 28 is realistic.'
+  };
+
+  function seedRM(){
+    return {
+      id:'rm', progress:20, reqDone:false, protoLocked:false,
+      project:{name:'Reporting Manager', pm:'Jen Mohan', sprint:'Sprint 4 · Oct 5 to Oct 23, 2026', jira:'SCRUM'},
+      stakeholders:[
+        {name:'Jen Mohan', role:'admin'},{name:'Dev lead', role:'dev'},{name:'Data lead', role:'dev'},{name:'Sales lead', role:'business'},{name:'Client manager', role:'business'}
+      ],
+      items:[
+        {key:'scrum-jira-comment-90-day-timeouts-20261014', title:'Reporting API times out on date ranges over 90 days', source:'Jira Comment', by:'Dev lead', date:'2026-10-14', type:'blocker', priority:'high',
+          points:['Queries over 90 days exceed the 30-second gateway limit.','Scheduled quarterly reports fail until this is fixed.','The data team proposed pre-aggregated tables but has not given a date.'],
+          raw:'Any range past 90 days returns a gateway timeout. Quarterly schedules fail every run. Data team says pre-aggregation is the fix but is not scheduled.',
+          affected:['Jira','Timeline'], change:'Add a blocker and cap custom date ranges at 90 days for the beta unless the data team commits to pre-aggregation by Oct 20.',
+          impact:'Quarterly reports cannot ship in the beta; reports up to 90 days are unaffected.', reason:'Blocks a headline feature and has no committed date.', status:'pending'},
+        {key:'scrum-meeting-notes-legal-export-review-20261001', title:'CSV and PDF export is on hold for a legal review of data fields', source:'Meeting Notes', by:'Product ops', date:'2026-10-01', type:'blocker', priority:'medium', noteId:'n1',
+          points:['Legal must review which customer data fields can appear in exports.','The review date was not confirmed in the meeting.'],
+          raw:'Legal needs to review which customer data fields appear in exports before we ship CSV or PDF. They have not given us a date.',
+          affected:['Requirements','Risks & Blockers'], change:'Add a blocker: exports held pending legal field review (date unconfirmed).',
+          impact:'Exports may miss the beta; the builder and scheduling are unaffected.', reason:'Date is unconfirmed, so no one owns the follow-up.', status:'pending'},
+        {key:'scrum-feedback-card-cm3-slack-delivery-20261013', title:'CM #3 wants scheduled reports delivered to Slack as well as email', source:'Feedback Card', by:'Client manager #3', date:'2026-10-13', type:'requirement_change', priority:'high', clients:'Client A, Client C', cardId:'c1',
+          points:['Schedules should be able to post to a Slack channel.','Client A and Client C do not read report emails.','They want the PDF attached to the Slack post.'],
+          raw:'Client A and Client C do not read report emails. Please let schedules post to a Slack channel with the PDF attached.',
+          affected:['Requirements','Stakeholder Feedback'], change:'Add requirement: scheduled reports can be delivered to a Slack channel in addition to email.',
+          impact:'Adds a Slack delivery integration that may not fit the beta; two named clients depend on it.', reason:'A change to requirements that affects two named clients.', status:'pending'},
+        {key:'scrum-feedback-card-sample-gallery-20261012', title:'Sales asks for a gallery of sample reports', source:'Feedback Card', by:'Sales lead', date:'2026-10-12', type:'feedback', priority:'medium', clients:'', cardId:'c2',
+          points:['Sales wants three ready-made sample reports to show in demos.','They would use them in client calls before the beta.'],
+          raw:'Can we get three sample reports in a gallery? Sales needs something to show in demos.',
+          affected:['Stakeholder Feedback'], change:'Add to backlog: sample report gallery in Prototype and Design (after the beta unless the PM decides otherwise).',
+          impact:'Small addition; no effect on this sprint if deferred.', reason:'Request from sales with no deadline attached.', status:'pending'},
+        {key:'scrum-jira-comment-default-time-zone-20261011', title:'Clarify the default time zone for scheduled reports', source:'Jira Comment', by:'Dev lead', date:'2026-10-11', type:'comment', priority:'low',
+          points:['Schedules do not say which time zone they use.'],
+          raw:'Which time zone does a 9am Monday schedule use? Account or viewer?',
+          affected:['Requirements'], change:'Add requirement: schedules use the account time zone by default and can be changed per schedule.', impact:'Prevents reports arriving at the wrong hour.', reason:'Open question from dev.', status:'pending'},
+        {key:'scrum-prototype-feedback-column-picker-20261015', title:'The column picker is hard to find on a phone', source:'Prototype Feedback', by:'Sales lead', date:'2026-10-15', type:'comment', priority:'low',
+          points:['The column picker sits below the fold on small screens.'],
+          raw:'On my phone I could not find where to add columns.',
+          affected:['Next Steps'], change:'Move the column picker to a sticky bar on small screens.', impact:'Mobile usability of the report builder.', reason:'Prototype feedback from a business stakeholder.', status:'pending'},
+        {key:'scrum-slack-rename-dimensions-20261015', title:'Rename "Dimensions" to a label customers recognize', source:'Slack', by:'Client manager', date:'2026-10-15', type:'comment', priority:'low',
+          points:['Customers do not know what "dimensions" means in the builder.'],
+          raw:'Nobody on the client side knows what dimensions are. Can we call it something else?',
+          affected:['Requirements'], change:'Add requirement: label the grouping control "Group by" instead of "Dimensions".', impact:'Clearer wording in the builder.', reason:'Suggestion from a stakeholder.', status:'pending'}
+      ].map(function(i){ i.project_key='SCRUM'; i.created=i.date+'T12:00:00Z'; return i; }),
+      requirements:[
+        {id:'R-1', text:'Customers can build a report by choosing metrics, a group-by field and a date range.', from:'', sync:'synced'},
+        {id:'R-2', text:'Reports can be saved and scheduled for daily, weekly or monthly delivery by email.', from:'', sync:'synced'},
+        {id:'R-3', text:'Any report can be exported as CSV or PDF.', from:'', sync:'synced'},
+        {id:'R-4', text:'A report can be shared with named users in the same account, view-only.', from:'', sync:'synced'}
+      ],
+      cards:[
+        {id:'c1', audience:'client', by:'Client manager #3', date:'2026-10-13', clients:'Client A, Client C', body:'Client A and Client C do not read report emails. Please let schedules post to a Slack channel with the PDF attached.'},
+        {id:'c2', audience:'internal', by:'Sales lead', date:'2026-10-12', clients:'', body:'Can we get three sample reports in a gallery? Sales needs something to show in demos.'}
+      ],
+      notes:[
+        {id:'n1', title:'Kickoff sync', date:'2026-10-01', by:'PM', status:'processed', text:'Kickoff sync, Oct 1. Legal needs to review which customer data fields appear in exports before we ship CSV or PDF. They have not given us a date.'}
+      ],
+      protoComments:[],
+      sov:{why:'Customers export raw data and rebuild the same reports by hand every week. Reporting Manager lets them build, schedule and share those reports inside the product.', goal:'Put a beta of the report builder with email scheduling in front of Client B by Oct 23.', clients:['Client A','Client B','Client C'], goals:['Build a report in under five minutes','Replace weekly manual exports with schedules','Share reports without exporting']},
+      slack:[
+        {n:'#reporting-manager', ts:'Oct 16, 9:42 AM', main:true, sum:'Dev confirmed the report builder and email scheduling pass internal testing. The data team is still working on slow queries for ranges over 90 days. Sales asked for sample reports to use in demos.', next:'Data lead gives a date for pre-aggregation; PM decides on the sample gallery.'},
+        {n:'#data-platform', ts:'Oct 15, 4:10 PM', sum:'Pre-aggregated tables are scoped at about two weeks of work but not scheduled. The 30-second gateway limit has not changed.', next:'Data lead confirms a start date with the PM.'},
+        {n:'#client-success', ts:'Oct 14, 11:25 AM', sum:'Client B wants scheduled reports before November. Client A and Client C asked for Slack delivery.', next:'Client manager sends Client B the beta availability.'}
+      ],
+      log:[
+        {at:'2026-10-08T14:05:00Z', kind:'created', title:'Project page created from SCRUM ticket', note:'Title, status and sprint inherited from Jira.', effects:[]},
+        {at:'2026-10-01T16:30:00Z', kind:'accept', title:'Kickoff scope accepted', note:'Scope for the beta agreed with stakeholders.', effects:['Progress 0% to 20%']}
+      ]
+    };
+  }
+
+  
+  function mkItem(o){
+    var d={project_key:'SCRUM',status:'pending',clients:'',affected:[],points:[],raw:'',change:'',impact:'',reason:'',priority:'medium',type:'comment'};
+    for(var k in o) d[k]=o[k];
+    d.created=d.date+'T12:00:00Z'; return d;
+  }
+  function seedBE(){
+    return {id:'be', progress:100, reqDone:true, protoLocked:true,
+      project:{name:'Billing Export', pm:'Jen Mohan', sprint:'Sprint 3 · Sep 14 to Oct 2, 2026', jira:'SCRUM'},
+      stakeholders:[{name:'Jen Mohan',role:'admin'},{name:'Dev lead',role:'dev'},{name:'Finance lead',role:'business'}],
+      items:[
+        mkItem({key:'scrum-feedback-card-monthly-export-20261009',title:'Finance asks for a monthly automatic export',source:'Feedback Card',by:'Finance lead',date:'2026-10-09',type:'feedback',priority:'medium',cardId:'c1',points:['Finance runs the export by hand on the first of each month.','They want it to run on a schedule.'],raw:'Can the export run itself on the first of the month?',affected:['Stakeholder Feedback'],change:'Add to backlog: scheduled monthly export.',impact:'Small addition after launch.',reason:'Request from finance after handoff.'}),
+        mkItem({key:'scrum-feedback-card-invoice-footer-20261005',title:'Invoice PDF footer shows the wrong company address',source:'Feedback Card',by:'Finance lead',date:'2026-10-05',type:'comment',priority:'low',status:'accepted',decision_notes:'Fixed in the 1.0.1 patch.',decided_by:'Jen Mohan',decided_at:'2026-10-06T15:00:00Z',points:['The footer uses the old billing address.'],raw:'The address in the PDF footer is out of date.',affected:['Requirements'],change:'Update the footer to read the address from account settings.',impact:'Correctness of customer invoices.',reason:'Customer-facing error.'})
+      ],
+      requirements:[{id:'R-1',text:'Finance can export invoices for any date range as CSV.',from:'',sync:'synced'},{id:'R-2',text:'Exports include tax and currency columns.',from:'',sync:'synced'}],
+      cards:[{id:'c1',audience:'internal',by:'Finance lead',date:'2026-10-09',clients:'',body:'Can the export run itself on the first of the month?'}],
+      notes:[{id:'n1',title:'Launch review',date:'2026-10-02',by:'PM',status:'processed',text:'Launch review, Oct 2. The export shipped to all accounts. Finance will report issues in the project channel.'}],
+      protoComments:[],
+      sov:{why:'Finance rebuilt invoice spreadsheets by hand each month. Billing Export gives them one file with tax and currency columns.',goal:'Ship CSV export for all accounts by Oct 2.',clients:['Client A'],goals:['Close the month in one day','No manual spreadsheet edits']},
+      slack:[{n:'#billing-export',ts:'Oct 15, 2:05 PM',main:true,sum:'The export is live for all accounts. Finance reported one footer issue, now fixed. They asked for a monthly schedule.',next:'PM decides whether scheduling joins the next sprint.'}],
+      log:[{at:'2026-10-06T15:00:00Z',kind:'accept',title:'Invoice PDF footer shows the wrong company address',note:'Fixed in the 1.0.1 patch.',effects:['Summary regenerated']},{at:'2026-09-14T14:00:00Z',kind:'created',title:'Project page created from SCRUM ticket',note:'',effects:[]}]
+    };
+  }
+  function seedAR(){
+    return {id:'ar', progress:35, reqDone:false, protoLocked:false,
+      project:{name:'Alert Rules', pm:'Jen Mohan', sprint:'Sprint 5 · Oct 26 to Nov 13, 2026', jira:'SCRUM'},
+      stakeholders:[{name:'Jen Mohan',role:'admin'},{name:'Dev lead',role:'dev'},{name:'Client manager',role:'business'}],
+      items:[
+        mkItem({key:'scrum-jira-comment-notifications-migration-20261013',title:'Alert delivery waits on the notifications service migration',source:'Jira Comment',by:'Dev lead',date:'2026-10-13',type:'blocker',priority:'high',points:['Alert delivery cannot start until the migration lands.','No date has been confirmed.'],raw:'We cannot build delivery on the old service. Migration has no date.',affected:['Jira','Timeline'],change:'Add a blocker and start delivery work after the migration (date unconfirmed).',impact:'Delivery work cannot start; the rule builder is unaffected.',reason:'Blocks a core feature with no confirmed date.'}),
+        mkItem({key:'scrum-feedback-card-quiet-hours-20261014',title:'CM #2 wants quiet hours for each user',source:'Feedback Card',by:'Client manager #2',date:'2026-10-14',type:'requirement_change',priority:'high',clients:'Client B',cardId:'c1',points:['Users should be able to mute alerts overnight.','Client B on-call staff receive night alerts they do not own.'],raw:'Our on-call people get alerts all night. Please add quiet hours.',affected:['Requirements','Stakeholder Feedback'],change:'Add requirement: each user can set quiet hours that mute non-critical alerts.',impact:'Adds a per-user setting and a rule for critical alerts.',reason:'Requirement change tied to a named client.'}),
+        mkItem({key:'scrum-slack-severity-names-20261015',title:'Name the default severity levels',source:'Slack',by:'Sales lead',date:'2026-10-15',type:'comment',priority:'low',points:['Sales needs severity names to use in demos.'],raw:'What are the severity levels called?',affected:['Requirements'],change:'Add requirement: default severity levels are Info, Warning and Critical.',impact:'Wording only.',reason:'Open question from sales.'})
+      ],
+      requirements:[{id:'R-1',text:'Customers can create alert rules on any report metric.',from:'',sync:'synced'},{id:'R-2',text:'Alerts can be delivered by email.',from:'',sync:'synced'}],
+      cards:[{id:'c1',audience:'client',by:'Client manager #2',date:'2026-10-14',clients:'Client B',body:'Our on-call people get alerts all night. Please add quiet hours.'}],
+      notes:[{id:'n1',title:'Planning kickoff',date:'2026-10-12',by:'PM',status:'processed',text:'Planning kickoff, Oct 12. Alert delivery depends on the notifications migration.'}],
+      protoComments:[],
+      sov:{why:'Customers find out about metric problems days late. Alert Rules tells them when a report metric crosses a threshold.',goal:'Agree requirements and the delivery plan by Oct 23.',clients:['Client B'],goals:['Alert within minutes of a threshold breach','Rules built without engineering help']},
+      slack:[{n:'#alert-rules',ts:'Oct 15, 5:20 PM',main:true,sum:'The rule builder design is agreed. Delivery is waiting on the notifications migration. Sales asked about severity names.',next:'Dev lead gets a migration date; PM answers sales.'}],
+      log:[{at:'2026-10-12T14:00:00Z',kind:'created',title:'Project page created from SCRUM ticket',note:'',effects:[]}]
+    };
+  }
+  function seedAC(){
+    return {id:'ac', progress:5, reqDone:false, protoLocked:false,
+      project:{name:'Admin Console', pm:'Jen Mohan', sprint:'Sprint 6 · Nov 16 to Dec 4, 2026', jira:'SCRUM'},
+      stakeholders:[{name:'Jen Mohan',role:'admin'},{name:'Dev lead',role:'dev'},{name:'Support lead',role:'business'}],
+      items:[
+        mkItem({key:'scrum-feedback-card-audit-trail-20261014',title:'Support wants an audit trail for permission changes',source:'Feedback Card',by:'Support lead',date:'2026-10-14',type:'feedback',priority:'medium',cardId:'c1',points:['Support cannot see who changed a user role.','They want a list of changes with names and times.'],raw:'When a customer says access changed, we cannot tell who did it.',affected:['Requirements','Stakeholder Feedback'],change:'Add requirement: the console records who changed each permission, with a timestamp.',impact:'Adds an audit log to the first release.',reason:'Support request with no deadline.'}),
+        mkItem({key:'scrum-jira-comment-role-templates-20261015',title:'Decide who owns the role templates',source:'Jira Comment',by:'Dev lead',date:'2026-10-15',type:'comment',priority:'low',points:['No one owns the default role templates.'],raw:'Who decides what the Editor role can do?',affected:['Summary'],change:'Name an owner for role templates before sprint planning.',impact:'Avoids rework in planning.',reason:'Open question from dev.'})
+      ],
+      requirements:[{id:'R-1',text:'Admins can invite users and assign roles.',from:'',sync:'synced'}],
+      cards:[{id:'c1',audience:'internal',by:'Support lead',date:'2026-10-14',clients:'',body:'When a customer says access changed, we cannot tell who did it.'}],
+      notes:[],
+      protoComments:[],
+      sov:{why:'Account owners manage users through support tickets. Admin Console lets them do it themselves.',goal:'Write the first requirements and confirm scope by Nov 16.',clients:['Client A','Client C'],goals:['Self-serve user management','Fewer access tickets']},
+      slack:[{n:'#admin-console',ts:'Oct 15, 10:30 AM',main:true,sum:'The team is collecting requirements before planning starts. Support asked for an audit trail.',next:'PM schedules a requirements workshop.'}],
+      log:[{at:'2026-10-14T14:00:00Z',kind:'created',title:'Project page created from SCRUM ticket',note:'',effects:[]}]
+    };
+  }
+  function seed(){ return {persona:'admin', current:'rm', projects:{rm:seedRM(), ar:seedAR(), ac:seedAC(), be:seedBE()}}; }
+  var ORDER=['rm','ar','ac','be'];
+
+  var G, S, ui={editingCard:null,tab:'pending',filter:'all',expanded:null,drawerOpen:false,menuOpen:false,open:{meetings:true},fbTab:'internal',drafts:{},fresh:{},run:null,importOpen:false,toast:''};
+  function load(){ try{ var r=localStorage.getItem(KEY); if(r){ var p=JSON.parse(r); if(p&&p.projects&&p.projects[p.current]) return p; } }catch(e){} return seed(); }
+  function save(){ try{ localStorage.setItem(KEY,JSON.stringify(G)); }catch(e){} }
+  /* ---------- n8n connection (webhooks) ---------- */
+  var NKEY='launchpad-n8n-cfg';
+  function ncfg(){ var c={}; try{ c=JSON.parse(localStorage.getItem(NKEY)||'{}')||{}; }catch(e){} if(!c.base&&c.itemsUrl) c.base=String(c.itemsUrl).replace(/\/launchpad-items.*$/,''); return c; }
+  function nsave(c){ try{ localStorage.setItem(NKEY,JSON.stringify(c)); }catch(e){} }
+  function nconnected(){ return !!ncfg().base; }
+  function nep(name){ return String(ncfg().base||'').replace(/\/+$/,'')+'/launchpad-'+name; }
+  function nok(u){ return /^(https:\/\/|http:\/\/(localhost|127\.0\.0\.1)(:|\/|$))/.test(u); }
+  function nurl(base,params){ var u=base+(base.indexOf('?')>-1?'&':'?'); return u+Object.keys(params).filter(function(k){return params[k]}).map(function(k){return encodeURIComponent(k)+'='+encodeURIComponent(params[k])}).join('&'); }
+  function nerr(e){
+    if(e&&e.name==='AbortError') return 'n8n did not answer in 12 seconds.';
+    if(e&&e.status===401) return 'n8n rejected the access key.';
+    if(e&&e.status) return 'n8n answered with an error ('+e.status+').';
+    return 'Could not reach n8n. Check the URL, that the workflow is active, and that you opened the standalone file. The page published on claude.ai blocks calls to outside addresses.';
+  }
+  async function nfetch(url,opts){
+    var ac=new AbortController(), t=setTimeout(function(){ac.abort()},12000);
+    try{ opts=opts||{}; opts.signal=ac.signal; opts.mode='cors'; var r=await fetch(url,opts); if(!r.ok){ var er=new Error('http'); er.status=r.status; throw er; } return await r.json(); }
+    finally{ clearTimeout(t); }
+  }
+  async function nSync(){
+    var c=ncfg(); if(!nconnected()||!can.approve()) return;
+    ui.nbusy=true; renderMonitor();
+    try{ var j=await nfetch(nurl(nep('items'),{project_key:S.project.jira||'SCRUM',key:c.key}));
+      var rows=Array.isArray(j)?j:(j.items||j.data||j.rows||[]); importRows(rows,'n8n sync',true); await nState(true); ui.nstatus='Synced '+new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})+'. '+rows.length+' pending row'+(rows.length===1?'':'s')+' in n8n.';
+    }catch(e){ ui.nstatus=nerr(e); toast(nerr(e)); }
+    ui.nbusy=false; renderMonitor(); if(ui.drawerOpen) renderDrawer();
+  }
+  async function nState(silent){
+    if(!nconnected()) return false; var c=ncfg();
+    try{ var j=await nfetch(nurl(nep('state'),{project_key:S.project.jira||'SCRUM',key:c.key}));
+      var m={}; (j.sections||[]).forEach(function(x){ if(x&&x.section) m[String(x.section).toLowerCase().replace(/\s+/g,'_')]=x; });
+      var prev=JSON.stringify(S.remote||{}); S.remote={sections:m,changelog:(j.changelog||[]).slice(0,30),fetched:new Date().toISOString()};
+      save(); renderAll(); return JSON.stringify(S.remote.sections)+JSON.stringify(S.remote.changelog)!==prev;
+    }catch(e){ if(!silent){ ui.nstatus=nerr(e); toast(nerr(e)); } return false; }
+  }
+  async function nStatePoll(){
+    ui.statePolling=true; ui.stateMsg='The Updater Agent in n8n is rewriting the summary, next steps and requirements. This can take a minute.'; renderMonitor();
+    var before=JSON.stringify(((S.remote||{}).sections)||{})+JSON.stringify(((S.remote||{}).changelog)||[]);
+    for(var i=0;i<12;i++){ await sleep(6000); await nState(true); var now=JSON.stringify(((S.remote||{}).sections)||{})+JSON.stringify(((S.remote||{}).changelog)||[]); if(now!==before){ ui.stateMsg='The agents updated the summary, next steps and requirements.'; break; } if(i===11) ui.stateMsg='No update from the agents yet. Click Sync from n8n in a minute.'; }
+    ui.statePolling=false; renderAll();
+  }
+  async function nRemoteRun(inp){
+    var c=ncfg(); ui.run={active:true,lines:[],mode:'n8n Orchestrator Agent (live)',title:inp.title};
+    var push=function(t){ ui.run.lines.push({t:t,sim:false}); renderMonitor(); renderArtifacts(); };
+    push('Sending "'+inp.title+'" to the Orchestrator Agent in n8n');
+    var body=new URLSearchParams({key:c.key||'',project_key:S.project.jira||'SCRUM',source:inp.source,title:inp.title,date:inp.date||'',by:inp.by||'',clients:inp.clients||'',text:inp.text||'',source_ref:inp.cardId?('launchpad-card:'+inp.cardId):'',item_type:inp.type||''});
+    try{ await nfetch(nep('submit'),{method:'POST',body:body}); }
+    catch(e){ push('Could not send it. '+nerr(e)); ui.run.active=false; save(); renderAll(); return []; }
+    push('n8n accepted it. The Orchestrator is reading it and checking Jira and Slack (read-only). This can take a minute.');
+    var got=0;
+    for(var i=0;i<15;i++){ await sleep(6000); var rows=null; try{ var j=await nfetch(nurl(nep('items'),{project_key:S.project.jira||'SCRUM',key:c.key})); rows=Array.isArray(j)?j:(j.items||[]); }catch(e){ continue; } got=importRows(rows,'n8n sync','silent'); if(got>0) break; }
+    push(got>0?'Done. '+plural(got,'item')+' waiting for the PM. Nothing on the page changed.':'Still working. Click Sync from n8n in a minute.');
+    ui.run.active=false; if(got>0){ ui.tab='pending'; ui.filter='all'; } save(); renderAll(); return [];
+  }
+  async function nTest(){
+    var base=(ui.drafts.nBase!==undefined?ui.drafts.nBase:ncfg().base||'').trim().replace(/\/+$/,''), c={key:(ui.drafts.nKey!==undefined?ui.drafts.nKey:ncfg().key||'').trim()};
+    if(!nok(base)){ ui.nstatus='Enter the base URL first. It must start with https:// (http://localhost is also fine for a local n8n).'; renderDrawer(); return; }
+    ui.nstatus='Testing...'; renderDrawer();
+    try{ var j=await nfetch(nurl(base+'/launchpad-items',{project_key:S.project.jira||'SCRUM',key:c.key})); var rows=Array.isArray(j)?j:(j.items||j.data||j.rows||[]); ui.nstatus='Connected. n8n returned '+rows.length+' pending row'+(rows.length===1?'':'s')+'.'; }
+    catch(e){ ui.nstatus=nerr(e); }
+    renderDrawer();
+  }
+  async function nDecision(it,status){
+    if(!nconnected()) return; var c=ncfg();
+    var body=new URLSearchParams({key:c.key||'',project_key:it.project_key||S.project.jira||'SCRUM',item_key:it.key,status:status,decision_notes:it.decision_notes||'',decided_by:it.decided_by||'',decided_at:it.decided_at||''});
+    it.n8n='sending'; renderMonitor();
+    try{ var j=await nfetch(nep('decision'),{method:'POST',body:body}); it.n8n=(j&&j.ok===false)?'missing':'ok'; if(it.n8n==='ok'&&status==='accepted') nStatePoll(); }
+    catch(e){ it.n8n='failed'; it.n8nErr=nerr(e); }
+    save(); renderMonitor();
+    return it.n8n;
+  }
+  G=load(); S=G.projects[G.current];
+
+  var can={
+    approve:function(){return G.persona==='admin'},
+    control:function(){return G.persona==='admin'},
+    invite:function(){return G.persona==='admin'}
+  };
+  function personaName(){ return G.persona==='admin'? S.project.pm+' (PM)' : (G.persona==='dev'?'Dev':'Business')+' stakeholder'; }
+
+  /* ---------- derived ---------- */
+  function pending(){ return S.items.filter(function(i){return i.status==='pending'}); }
+  function sortItems(a){ return a.slice().sort(function(x,y){
+    return (TYPE_ORDER[x.type]-TYPE_ORDER[y.type])||(PRIO_ORDER[x.priority]-PRIO_ORDER[y.priority])||(y.created>x.created?1:-1);
+  }); }
+  function counts(){ var p=pending(); return {
+    blocker:p.filter(function(i){return i.type==='blocker'}).length,
+    requirement_change:p.filter(function(i){return i.type==='requirement_change'}).length,
+    feedback:p.filter(function(i){return i.type==='feedback'}).length,
+    comment:p.filter(function(i){return i.type==='comment'}).length,
+    milestone:p.filter(function(i){return i.type==='milestone'}).length,
+    delayed:S.items.filter(function(i){return i.status==='delayed'}).length,
+    decided:S.items.filter(function(i){return i.status==='accepted'||i.status==='rejected'}).length
+  }; }
+  function stage(){ var p=S.progress; return p<35?'planning and requirements gathering is in progress': p<50?'the requirements draft is done and in review': (p<75?'requirements are complete and the project is moving into build':'the build is in evaluation and moving toward handoff'); }
+  function summaryText(){
+    var c=counts(), top=sortItems(pending())[0], parts=[];
+    if(c.blocker) parts.push(plural(c.blocker,'blocker'));
+    if(c.milestone) parts.push(plural(c.milestone,'milestone')+' to confirm');
+    if(c.requirement_change) parts.push(plural(c.requirement_change,'requirement change'));
+    if(c.feedback) parts.push(plural(c.feedback,'feedback card'));
+    if(c.comment) parts.push(plural(c.comment,'comment'));
+    var s1=S.progress>=100? S.project.name+' has reached handoff.' : S.project.name+' is currently in '+(S.progress<35?'planning and requirements gathering is in progress':(S.progress<50?'planning, and the requirements draft is done and in review':(S.progress<75?'build, and requirements are complete':'evaluation, moving toward handoff')))+'.';
+    var s2=parts.length? 'You have '+parts.join(', ').replace(/, ([^,]*)$/,(parts.length>2?', and ':' and ')+'$1')+' to review.' : 'Nothing is waiting for your decision.';
+    var s3=top? 'Next step: decide on "'+top.title+'"'+(c.delayed?' ('+c.delayed+' delayed).':'.') : (c.delayed? plural(c.delayed,'item')+' delayed; revisit when ready.':'Add meeting notes or feedback to start the next round.');
+    var rs=S.remote&&S.remote.sections&&S.remote.sections.summary&&S.remote.sections.summary.content; if(rs) s1=String(rs).trim();
+    return [s1,s2,s3];
+  }
+
+  /* ---------- renderers ---------- */
+  function renderProject(){
+    $('#sec-project').innerHTML=
+      '<div class="row" style="justify-content:space-between"><span class="eyebrow">Launch Pad · Project page</span><span class="pill plain" title="All data on this page is example data">Sample data</span></div>'+
+      '<h1>'+esc(S.project.name)+'</h1>'+
+      '<dl class="meta" style="margin:0"><dt>PM</dt><dd>'+esc(S.project.pm)+'</dd><dt>Sprint</dt><dd>'+esc(S.project.sprint)+'</dd><dt>Jira</dt><dd class="mono">'+esc(S.project.jira)+'</dd></dl>'+
+      (function(){ var L=S.links||{}, a=[]; if(L.prototype&&/^https:\/\//.test(L.prototype)) a.push(linkChip('prototype',L.prototype)); if(L.miro&&/^https:\/\//.test(L.miro)) a.push(linkChip('Miro board',L.miro));
+        if(!a.length) return can.control()?'<div class="row" style="margin-top:4px"><button class="btn small" type="button" data-action="goto-links">Add prototype and Miro links</button></div>':'';
+        return '<div class="row" style="margin-top:4px">'+a.join('')+'</div>'; })();
+  }
+  function renderProgress(){
+    var p=S.progress, labels=[['Planning',0],['Reqs',25],['Build',50],['Eval',75],['Handoff',100]];
+    // stage labels sit at positions that match the placeholder logic: 50 = requirements done
+    labels=[['Added',0,'Add'],['Planning',20,'Plan'],['Draft done',35,'Draft'],['Reqs done',50,'Reqs'],['Eval',75,'Eval'],['Handoff',100,'Done']];
+    $('#sec-progress').innerHTML=
+      '<div class="row" style="justify-content:space-between"><div><span class="eyebrow">Pad status</span><h2>Progress from planning to handoff</h2></div></div>'+
+      '<div class="track-wrap"><div class="marker" style="left:'+p+'%"><b>'+p+'%</b><i></i></div><div class="track" role="img" aria-label="Progress '+p+' percent"></div></div>'+
+      '<div class="ticks" style="margin:6px 4px 0">'+labels.map(function(l,i){ var left=l[1]; var tf=(i===0||i===labels.length-1)?'':'transform:translateX(-50%);'; return '<span style="left:'+left+'%;'+tf+'">'+'<i class="lf">'+esc(l[0])+'</i><i class="ls">'+esc(l[2]||l[0])+'</i></span>'; }).join('')+'</div>'+
+      '<p class="note-small" style="margin-top:6px">Placeholder logic: starts at 20%. A requirements doc the PM confirms moves it to Reqs draft done (35%). Each accepted update adds 5 until requirements are marked done (50%).</p>';
+  }
+  function projectStat(P){ var n=P.items.filter(function(i){return i.status==='pending'}).length; return {n:n, text:P.progress+'% · '+(n?n+' to review':'clear')}; }
+  function renderNav(){
+    var cur=S.project.name;
+    var chev='<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    var menu=ui.menuOpen?('<div class="menu" role="menu"><span class="eyebrow">Projects</span>'+ORDER.map(function(id){
+      var P=G.projects[id]; var st=projectStat(P);
+      return '<button class="menu-item" role="menuitem" type="button" data-action="goto" data-id="'+id+'" aria-current="'+(id===G.current)+'"><span class="nm">'+esc(P.project.name)+'</span><span class="stat">'+esc(st.text)+'</span><span class="sub">'+esc(P.project.sprint)+'</span><span></span></button>';
+    }).join('')+'</div>'):'';
+    var sliders='<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4.5h7M12 4.5h2M2 11.5h2M7 11.5h7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/><circle cx="10.5" cy="4.5" r="1.6" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="5.5" cy="11.5" r="1.6" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>';
+    $('#sec-nav').innerHTML=
+      '<div class="topbar-left"><span class="brand">Launch Pad</span><span class="sep" aria-hidden="true">/</span><div class="switcher"><button class="switch-btn" type="button" data-action="menu-toggle" aria-haspopup="true" aria-expanded="'+ui.menuOpen+'"><span class="nm">'+esc(cur)+'</span>'+chev+'</button>'+menu+'</div></div>'+
+      '<div class="topbar-right"><button class="btn primary" type="button" data-action="open-card" id="card-btn">Add feedback card</button><button class="set-btn" type="button" data-action="settings-toggle" aria-haspopup="dialog" aria-expanded="'+ui.drawerOpen+'" id="set-btn">'+sliders+'<span>Settings</span><small>'+esc(PERSONAS[G.persona])+'</small></button></div>';
+  }
+  function yn(v){ return v? '<td class="y">Yes</td>':'<td class="n">No</td>'; }
+  function renderDrawer(){
+    var el=$('#sec-drawer');
+    if(!ui.drawerOpen){ el.innerHTML=''; return; }
+    var seg=Object.keys(PERSONAS).map(function(k){ return '<button type="button" data-action="persona" data-v="'+k+'" aria-pressed="'+(G.persona===k)+'">'+PERSONAS[k]+'</button>'; }).join('');
+    var rows=[
+      ['Invite people and assign personas',1,0,0],['Accept, reject or delay updates',1,0,0],['Update Jira tickets without approval',1,1,0],
+      ['Add, change or remove prototype and Miro links; use the prototype control panel',1,0,0],['Add artifacts (notes, docs, designs)',1,1,1],['Create feedback cards',1,1,1],['Edit your own feedback cards until the PM decides',1,1,1],['Comment on artifacts',1,1,1]];
+    var inviteForm=can.invite()?
+      '<form data-form="invite" class="row" style="margin-top:10px;align-items:flex-end"><div class="field" style="flex:2;min-width:150px"><label for="inv-email">Invite by email</label><input id="inv-email" type="email" required placeholder="name@company.com" data-draft="invEmail" value="'+esc(ui.drafts.invEmail||'')+'"></div><div class="field" style="flex:1;min-width:100px"><label for="inv-role">Persona</label><select id="inv-role" data-draft="invRole"><option value="dev">Dev</option><option value="business"'+(ui.drafts.invRole==='business'?' selected':'')+'>Business</option><option value="admin"'+(ui.drafts.invRole==='admin'?' selected':'')+'>Admin</option></select></div><button class="btn primary" type="submit">Invite</button></form>' :
+      '<p class="note-small" style="margin-top:10px">Only the Admin (PM) can invite people or assign personas.</p>';
+    el.innerHTML='<div class="drawer-backdrop" data-action="close-drawer"></div><aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title">'+
+      '<div class="drawer-head"><h2 id="drawer-title">Settings</h2><button class="btn small" type="button" data-action="close-drawer" id="drawer-close">Close</button></div>'+
+      '<section><h3>Viewing as</h3><div class="seg" role="group" aria-label="Viewing as">'+seg+'</div><p class="note-small" style="margin-top:6px">Switch personas to see what each one can do on this page.</p></section>'+
+      '<section><h3>Stakeholders ('+S.stakeholders.length+') on '+esc(S.project.name)+'</h3><ul class="plain">'+S.stakeholders.map(function(s){return '<li><span>'+esc(s.name)+'</span><span class="pill plain">'+PERSONAS[s.role]+'</span></li>'}).join('')+'</ul>'+inviteForm+'</section>'+
+      '<section><h3>What each persona can do</h3><div class="tablewrap"><table><thead><tr><th>Capability</th><th>Admin</th><th>Dev</th><th>Business</th></tr></thead><tbody>'+
+      rows.map(function(r){return '<tr><td>'+r[0]+'</td>'+yn(r[1])+yn(r[2])+yn(r[3])+'</tr>'}).join('')+'</tbody></table></div></section>'+
+      (can.approve()?'<section><h3>n8n connection</h3><form data-form="n8n" class="stack" style="gap:10px"><div class="field"><label for="n-base">n8n webhook base URL</label><input id="n-base" type="url" data-draft="nBase" value="'+esc(ui.drafts.nBase!==undefined?ui.drafts.nBase:(ncfg().base||''))+'" placeholder="https://your-account.app.n8n.cloud/webhook"></div><div class="field"><label for="n-key">Access key (optional, must match the key in the workflow)</label><input id="n-key" data-draft="nKey" autocomplete="off" value="'+esc(ui.drafts.nKey!==undefined?ui.drafts.nKey:(ncfg().key||''))+'"></div><div class="row"><button class="btn primary small" type="submit">Save connection</button><button class="btn small" type="button" data-action="n8n-test">Test connection</button>'+(nconnected()?'<button class="btn small" type="button" data-action="n8n-clear">Disconnect</button>':'')+'</div><p class="note-small" role="status">'+esc(ui.nstatus||(nconnected()?'Connected settings are saved in this browser only.':'Not connected. The page works on sample data and pasted rows.'))+'</p><p class="note-small">Works in the standalone file. The copy published on claude.ai blocks calls to outside addresses.</p></form></section>':'')+
+      (can.approve()?'<section><h3>Admin actions</h3><div class="row"><button class="btn small" type="button" data-action="req-done" '+(S.reqDone?'disabled':'')+'>'+(S.reqDone?'Requirements marked done':'Mark requirements done (50%)')+'</button><button class="btn small crit" type="button" data-action="reset">Reset all sample data</button></div></section>':'')+
+      '</aside>';
+  }
+  function itemRow(it){
+    var open=ui.expanded===it.key;
+    var head='<button class="item-top" type="button" data-action="toggle-item" data-key="'+esc(it.key)+'" aria-expanded="'+open+'">'+
+      '<span class="pill '+it.type+'">'+TYPE_LABEL[it.type]+'</span>'+
+      '<span><span class="item-title">'+esc(it.title)+'</span><br><span class="item-sub">'+esc(it.source)+' · '+esc(it.by)+' · '+fmtDay(it.date)+(it.clients?' · '+esc(it.clients):'')+'</span><br><span class="item-sub">'+esc(it.reason||'')+'</span></span>'+
+      '<span class="row" style="justify-content:flex-end">'+(ui.fresh[it.key]?'<span class="pill fresh">New</span>':'')+'<span class="pill plain">'+esc(it.priority)+'</span></span></button>';
+    if(!open) return '<div class="item">'+head+'</div>';
+    var chips=SECTIONS.filter(function(s){return it.affected.indexOf(s)>-1 || can.approve()}).map(function(s){
+      var on=it.affected.indexOf(s)>-1; return '<button class="chip" type="button" data-action="toggle-section" data-key="'+esc(it.key)+'" data-s="'+esc(s)+'" aria-pressed="'+on+'" '+(can.approve()&&it.status==='pending'?'':'disabled')+'>'+esc(s)+'</button>'; }).join(' ');
+    var note=ui.drafts['note:'+it.key]||'';
+    var decision;
+    if(it.status!=='pending'){
+      decision='<div class="decision"><h4>Decision</h4><p><b>'+({accepted:'Accepted',rejected:'Rejected',delayed:'Delayed'}[it.status])+'</b> by '+esc(it.decided_by||'PM')+' on '+esc(fmtStamp(it.decided_at))+'</p><p class="muted" style="margin-top:4px">'+esc(it.decision_notes||'')+'</p>'+
+        (nconnected()&&it.n8n?'<p class="note-small" style="margin-top:6px">'+({sending:'Recording in n8n...',ok:'Recorded in the n8n Action Items table.',missing:'Not found in the n8n table (sample item), so only the page was updated.',failed:'Saved on the page, but n8n was not updated. '+esc(it.n8nErr||'')+' <button class="btn small" type="button" data-action="n8n-retry" data-key="'+esc(it.key)+'">Retry</button>'})[it.n8n]+'</p>':'')+
+        (can.approve()?'<button class="btn small" style="margin-top:8px" type="button" data-action="reopen" data-key="'+esc(it.key)+'">'+(it.status==='delayed'?'Move back to needs attention':'Change this decision')+'</button>':'')+'</div>';
+    } else if(can.approve()){
+      decision='<div class="decision"><h4>Your decision</h4><label for="note-'+esc(it.key)+'">Note (required for every decision)</label><textarea id="note-'+esc(it.key)+'" data-draft="note:'+esc(it.key)+'" placeholder="Good idea, but we cannot integrate with company X in time for the MVP.">'+esc(note)+'</textarea>'+
+        '<div class="row" style="margin-top:8px"><button class="btn ok" type="button" data-decide="accept" data-key="'+esc(it.key)+'" '+(note.trim()?'':'disabled')+'>Accept</button><button class="btn warn" type="button" data-decide="delay" data-key="'+esc(it.key)+'" '+(note.trim()?'':'disabled')+'>Delay</button><button class="btn crit" type="button" data-decide="reject" data-key="'+esc(it.key)+'" '+(note.trim()?'':'disabled')+'>Reject</button></div>'+
+        '<p class="note-small" style="margin-top:8px">Accept tells the orchestrator to apply the proposed change. Nothing changes before you click.</p></div>';
+    } else {
+      decision='<div class="decision"><h4>Waiting for the PM</h4><p class="muted">Only the Admin (PM) can accept, reject or delay. Switch to Admin in Settings to try the decision flow.</p></div>';
+    }
+    return '<div class="item">'+head+'<div class="item-body"><div class="stack" style="gap:14px">'+
+      '<div><h4>Key points</h4><ul>'+it.points.map(function(p){return '<li>'+esc(p)+'</li>'}).join('')+'</ul></div>'+
+      '<div><h4>Proposed change</h4><p>'+esc(it.change)+'</p></div>'+
+      '<div><h4>Suggested impact (agent guess)</h4><p>'+esc(it.impact)+'</p><div class="row" style="margin-top:6px">'+chips+'</div></div>'+
+      '<div><button class="btn small" type="button" data-action="open-raw" data-key="'+esc(it.key)+'">Open raw artifact: '+esc(it.source)+'</button><details style="margin-top:8px"><summary>Raw text from source</summary><blockquote>'+esc(it.raw)+'</blockquote></details></div>'+
+      '</div><div>'+decision+'</div></div></div>';
+  }
+
+  function renderMonitor(){
+    var c=counts(), sum=summaryText();
+    var list;
+    if(ui.tab==='pending') list=sortItems(pending()); else if(ui.tab==='delayed') list=sortItems(S.items.filter(function(i){return i.status==='delayed'})); else list=S.items.filter(function(i){return i.status==='accepted'||i.status==='rejected'}).sort(function(a,b){return (b.decided_at||'')>(a.decided_at||'')?1:-1});
+    if(ui.tab==='pending' && ui.filter!=='all') list=list.filter(function(i){return i.type===ui.filter});
+    var flt=[['all','All ('+pending().length+')'],['blocker','Blockers ('+c.blocker+')'],['requirement_change','Requirement changes ('+c.requirement_change+')'],['milestone','Milestones ('+c.milestone+')'],['feedback','Feedback cards ('+c.feedback+')'],['comment','Comments ('+c.comment+')']];
+    var run='';
+    if(ui.run){ run='<div class="run" aria-live="polite"><ul class="plain">'+ui.run.lines.map(function(l){return '<li class="'+(l.sim?'sim':'')+'">'+(l.sim?'[simulated] ':'')+esc(l.t)+'</li>'}).join('')+'</ul>'+(ui.run.mode?'<div class="mode">Extraction: '+esc(ui.run.mode)+'</div>':'')+'</div>'; }
+    $('#sec-monitor').innerHTML=
+      '<div class="monitor-head"><div><span class="eyebrow">Status monitor</span><h2>What needs your attention</h2></div>'+
+      '<div class="row"><button class="btn small" type="button" data-action="open-card">Add feedback card</button>'+(can.approve()&&nconnected()?'<button class="btn small primary" type="button" data-action="n8n-sync" '+(ui.nbusy?'disabled':'')+'>'+(ui.nbusy?'Syncing...':'Sync from n8n')+'</button>':'')+(can.approve()?'<button class="btn small" type="button" data-action="import-toggle">'+(nconnected()?'Paste rows instead':'Import from n8n')+'</button>':'')+'</div></div>'+
+      '<p class="summary">'+sum.map(esc).join(' ')+'</p>'+
+      (S.remote&&S.remote.sections&&S.remote.sections.summary?'<p class="note-small mono">First sentence(s) written by the Updater Agent in n8n after your last accepted decision.</p>':'')+
+      (function(){ var ns=S.remote&&S.remote.sections&&S.remote.sections.next_steps; if(!ns||!ns.content) return ''; var ls=String(ns.content).split('\n').map(function(x){return x.replace(/^\s*[-*]\s*/,'').trim()}).filter(Boolean); return '<div class="decision" style="margin:10px 0"><h4 class="eyebrow">Next steps (written by the agents)</h4><ul>'+ls.map(function(x){return '<li>'+esc(x)+'</li>'}).join('')+'</ul></div>'; })()+
+      (ui.stateMsg?'<p class="note-small mono" role="status">'+esc(ui.stateMsg)+'</p>':'')+
+      (nconnected()?'<p class="note-small mono">Connected to n8n. Proposals come from the Orchestrator Agent; accepted decisions go to the Updater Agent.</p>':'<p class="note-small mono">Agents propose. Only a PM decision changes the page. Jira, Slack, Confluence and Drive lookups are simulated here; n8n is not connected yet.</p>')+
+      (ui.importOpen&&can.approve()?'<div class="decision" style="margin-top:12px"><label for="imp">Paste rows exported from the n8n "Action Items" data table (JSON array)</label><textarea id="imp" data-draft="import" placeholder=\'[{"item_key":"...","title":"...","status":"pending", ...}]\'>'+esc(ui.drafts.import||'')+'</textarea><div class="row" style="margin-top:8px"><button class="btn primary small" type="button" data-action="import-go">Add to queue</button></div></div>':'')+
+      run+
+      '<div class="tabs" role="tablist">'+[['pending','Needs attention ('+pending().length+')'],['delayed','Delayed ('+c.delayed+')'],['decided','Decided ('+c.decided+')']].map(function(t){return '<button role="tab" type="button" data-action="tab" data-v="'+t[0]+'" aria-selected="'+(ui.tab===t[0])+'">'+t[1]+'</button>'}).join('')+'</div>'+
+      (ui.tab==='pending'?'<div class="filters" role="group" aria-label="Filter">'+flt.map(function(f){return '<button class="chip" type="button" data-action="filter" data-v="'+f[0]+'" aria-pressed="'+(ui.filter===f[0])+'">'+esc(f[1])+'</button>'}).join('')+'</div>':'<div style="height:8px"></div>')+
+      '<div class="items">'+(list.length? list.map(itemRow).join('') : '<div class="empty">'+(ui.tab==='pending'?'Nothing matches this filter. Add meeting notes under Artifacts to see the agents propose updates.':'Nothing here yet.')+'</div>')+'</div>';
+  }
+
+  function renderSlack(){
+    var ch=S.slack||[];
+    $('#sec-slack').innerHTML='<span class="eyebrow">Slack</span><h2>Project channel</h2><p class="note-small" style="margin-bottom:6px">Each project page has its own channel. Other relevant channels are monitored. Sample summaries.</p>'+
+      ch.map(function(c){return '<div class="chan"><div class="row" style="justify-content:space-between"><span class="chan-name">'+esc(c.n)+'</span><span class="note-small mono">'+esc(c.ts)+'</span></div>'+(c.main?'<span class="pill plain" style="margin:4px 0">Dedicated channel</span>':'<span class="pill plain" style="margin:4px 0">Monitored</span>')+'<p>'+esc(c.sum)+'</p><p class="next"><b>Next steps:</b> '+esc(c.next)+'</p></div>'}).join('');
+  }
+
+  function artBox(id,title,sub,body){
+    var open=!!ui.open[id];
+    return '<div class="art" id="art-'+id+'"><button type="button" data-action="art" data-id="'+id+'" aria-expanded="'+open+'"><span>'+esc(title)+'</span><span class="note-small">'+esc(sub)+(open?'':'')+'</span></button>'+(open?'<div class="art-body">'+body+'</div>':'')+'</div>';
+  }
+  function canEditCard(c){
+    var all=c.id?S.items.filter(function(x){return x.cardId===c.id}):[];
+    return (c.owner||'business')===G.persona && all.every(function(x){return x.status==='pending'});
+  }
+  function cardStatus(c){
+    var all=c.id?S.items.filter(function(x){return x.cardId===c.id}):[];
+    if(!all.length) return '';
+    var L={pending:'With the PM',accepted:'Accepted',rejected:'Rejected',delayed:'Delayed'};
+    var n={}; all.forEach(function(x){ n[x.status]=(n[x.status]||0)+1; });
+    var ks=Object.keys(n);
+    if(ks.length===1) return L[ks[0]];
+    return ['pending','accepted','rejected','delayed'].filter(function(k){return n[k]}).map(function(k){return n[k]+' '+L[k].toLowerCase()}).join(', ');
+  }
+  function cardHtml(c,editable){
+    var cs=cardStatus(c);
+    var st=cs?'<span class="pill plain">'+esc(cs)+'</span>':'';
+    var loom=c.loom?'<p class="note-small" style="margin-top:2px">Loom: '+(/^https:\/\//.test(c.loom)?'<a href="'+esc(c.loom)+'" target="_blank" rel="noopener">'+esc(c.loom)+'</a>':esc(c.loom))+'</p>':'';
+    var files=(c.files&&c.files.length)?'<p class="note-small" style="margin-top:2px">Attachments: '+c.files.map(esc).join(', ')+'</p>':'';
+    var own=editable&&(c.owner||'business')===G.persona;
+    var edit=own&&canEditCard(c)?'<button class="btn small" type="button" data-action="edit-card" data-id="'+esc(c.id)+'">Edit</button>':'';
+    var locked=own&&!canEditCard(c)?'<p class="note-small" style="margin-top:4px">Locked after the PM decided. Add a new card to follow up.</p>':'';
+    return '<div class="log"><div class="row" style="justify-content:space-between"><b>'+esc(c.by)+'</b><span class="row"><span class="note-small mono">'+fmtDay(c.date)+(c.edited?' · edited':'')+'</span>'+st+edit+'</span></div><p style="margin-top:2px">'+esc(c.body)+'</p>'+(c.clients?'<p class="note-small" style="margin-top:2px">Clients: '+esc(c.clients)+'</p>':'')+loom+files+locked+'</div>';
+  }
+  function linkChip(label,url){
+    if(url&&/^https:\/\//.test(url)) return '<a class="btn primary" href="'+esc(url)+'" target="_blank" rel="noopener">Open '+esc(label)+' &#8599;</a>';
+    return '<span class="chip">'+esc(label)+': link not set</span>';
+  }
+  function runningNote(){ return ui.run&&ui.run.active? '<p class="note-small mono">Agents are working on "'+esc(ui.run.title)+'"...</p>':''; }
+
+  function renderArtifacts(){
+    var busy=!!(ui.run&&ui.run.active);
+    var sv=S.sov||{why:'',goal:'',clients:[],goals:[]};
+    var sov=
+      '<div><h4 class="eyebrow">Why</h4><p>'+esc(sv.why)+'</p></div>'+
+      '<div><h4 class="eyebrow">Sprint goal</h4><p>'+esc(sv.goal)+'</p></div>'+
+      '<div class="grid2"><div><h4 class="eyebrow">Key clients</h4><div class="row" style="margin-top:4px">'+sv.clients.map(function(c){return '<span class="chip">'+esc(c)+'</span>'}).join('')+'</div></div><div><h4 class="eyebrow">Key goals</h4><ul class="plain">'+sv.goals.map(function(g){return '<li>'+esc(g)+'</li>'}).join('')+'</ul></div></div>';
+    var reqs=
+      '<p class="note-small">Linked to Confluence. Accepted requirement changes appear here and queue a write-back (not connected in this prototype).</p>'+
+      '<div class="row"><button class="btn small" type="button" data-action="sim-confluence" '+(busy?'disabled':'')+'>Simulate: agent finds a new Confluence page</button><span class="note-small">Stands in for the Confluence Agent noticing a requirements page. It proposes the milestone; the PM confirms.</span></div>'+
+      ((S.remote&&S.remote.sections&&S.remote.sections.requirements&&S.remote.sections.requirements.content)?'<div class="decision"><h4 class="eyebrow">Requirements summary (written by the agents)</h4><p class="mono" style="white-space:pre-wrap;font-size:12px;margin:6px 0 0">'+esc(S.remote.sections.requirements.content)+'</p></div>':'')+
+      '<h4 class="eyebrow" style="margin-top:8px">Requirements docs</h4><div>'+((S.reqDocs&&S.reqDocs.length)?S.reqDocs.map(function(d){return '<div class="req"><span><b>'+esc(d.title)+'</b>'+(d.url?' &nbsp;<a href="'+esc(d.url)+'" target="_blank" rel="noopener">Open &#8599;</a>':'')+'<br><span class="note-small">Added by '+esc(d.by)+' on '+esc(fmtDay(d.date))+'</span></span></div>'}).join(''):'<p class="muted">No requirements doc added yet.</p>')+'</div>'+
+      '<form data-form="reqdoc" class="stack" style="gap:10px"><h3>Add a requirements doc</h3><div class="grid2"><div class="field"><label for="rd-title">Doc title</label><input id="rd-title" required data-draft="rdTitle" value="'+esc(ui.drafts.rdTitle||'')+'" placeholder="Reporting Manager PRD v1"></div><div class="field"><label for="rd-url">Link (https)</label><input id="rd-url" type="url" data-draft="rdUrl" value="'+esc(ui.drafts.rdUrl||'')+'" placeholder="https://..."></div></div><div class="row"><button class="btn primary" type="submit" '+(busy?'disabled':'')+'>Add doc</button><span class="note-small">When the PM adds a doc, Pad status moves to Reqs draft done. When anyone else adds one, the orchestrator proposes it and the PM confirms.</span></div></form>'+
+      '<div>'+S.requirements.map(function(r){return '<div class="req"><span><span class="mono">'+esc(r.id)+'</span> &nbsp;'+esc(r.text)+(r.from?'<br><span class="note-small">Added from '+esc(r.from)+'</span>':'')+'</span><span class="pill plain">'+(r.sync==='synced'?'Synced':'Write-back queued')+'</span></div>'}).join('')+'</div>';
+    var cards=S.cards.filter(function(c){return c.audience===ui.fbTab});
+    var fb=
+      '<div class="tabs" role="tablist" style="margin-top:0">'+[['internal','Internal'],['client','Clients']].map(function(t){return '<button role="tab" type="button" data-action="fbtab" data-v="'+t[0]+'" aria-selected="'+(ui.fbTab===t[0])+'">'+t[1]+'</button>'}).join('')+'</div>'+
+      '<div>'+(cards.length?cards.map(function(c){return cardHtml(c,true)}).join(''):'<p class="muted">No cards in this tab yet.</p>')+'</div>'+
+      '<div class="decision"><h3>Add a feedback card</h3><p class="note-small" style="margin:4px 0 10px">Share a use case, the clients who need it, or a missing requirement. The PM reviews every card.</p><button class="btn primary" type="button" data-action="open-card">Add feedback card</button></div>';
+    var notes=
+      '<div>'+S.notes.map(function(n){return '<div class="log" id="note-'+esc(n.id)+'"><div class="row" style="justify-content:space-between"><b>'+esc(n.title)+'</b><span class="note-small mono">'+fmtDay(n.date)+' · '+esc(n.status)+'</span></div><details><summary>Transcript</summary><blockquote style="white-space:pre-wrap">'+esc(n.text)+'</blockquote></details></div>'}).join('')+'</div>'+
+      '<form data-form="notes" class="stack" style="gap:10px"><h3>Add meeting notes</h3><p class="note-small">Google Meet notes land in the Drive folder; here you can paste them directly. Standup notes work the same way.</p>'+
+      '<div class="grid2"><div class="field"><label for="mn-title">Title</label><input id="mn-title" required data-draft="mnTitle" value="'+esc(ui.drafts.mnTitle||'')+'" placeholder="Reporting Manager weekly sync"></div><div class="field"><label for="mn-date">Meeting date</label><input id="mn-date" type="date" required data-draft="mnDate" value="'+esc(ui.drafts.mnDate||'2026-10-16')+'"></div></div>'+
+      '<div class="field"><label for="mn-text">Notes or transcript</label><textarea id="mn-text" required style="min-height:150px" data-draft="mnText" placeholder="Paste the transcript here">'+esc(ui.drafts.mnText||'')+'</textarea></div>'+
+      '<div class="row"><button class="btn primary" type="submit" '+(busy?'disabled':'')+'>'+(busy?'Agents working...':'Send to orchestrator')+'</button><button class="btn" type="button" data-action="sample-note" '+(busy?'disabled':'')+'>Load sample transcript</button></div>'+runningNote()+'</form>';
+    var proto=
+      '<p>Prototype and design files live in Claude and Miro.</p><div class="row">'+linkChip('prototype',(S.links||{}).prototype)+linkChip('Miro board',(S.links||{}).miro)+'</div>'+
+      (can.control()?'<form data-form="links" class="stack" style="gap:10px"><h3>Add or change links</h3><div class="grid2"><div class="field"><label for="lk-proto">Claude prototype link</label><input id="lk-proto" type="url" data-draft="lkProto" value="'+esc(ui.drafts.lkProto!==undefined?ui.drafts.lkProto:((S.links||{}).prototype||''))+'" placeholder="https://claude.ai/artifact/..."></div><div class="field"><label for="lk-miro">Miro board link</label><input id="lk-miro" type="url" data-draft="lkMiro" value="'+esc(ui.drafts.lkMiro!==undefined?ui.drafts.lkMiro:((S.links||{}).miro||''))+'" placeholder="https://miro.com/app/board/..."></div></div><div class="row"><button class="btn primary" type="submit">Save links</button><span class="note-small">Must start with https://. Leave a box empty to remove that link. Only the Admin can change these.</span></div></form>':'')+
+      (can.control()?'<div class="decision"><h4 class="eyebrow">Control panel (Admin only)</h4><p style="margin:6px 0">Version v0.3 · '+(S.protoLocked?'Locked for review':'Open for edits')+'</p><button class="btn small" type="button" data-action="lock">'+(S.protoLocked?'Unlock prototype':'Lock for review')+'</button></div>':'<div class="decision"><p class="muted">Only the Admin can change the prototype links and controls. You can open the links, use the prototype and send feedback.</p></div>')+
+      '<div>'+S.protoComments.map(function(c){return cardHtml(c,false)}).join('')+'</div>'+
+      '<form data-form="proto" class="stack" style="gap:10px"><h3>Prototype feedback</h3><div class="field"><label for="pf-body">Comment</label><textarea id="pf-body" required data-draft="pfBody" placeholder="What did you try, and what should change?">'+esc(ui.drafts.pfBody||'')+'</textarea></div><div class="row"><button class="btn primary" type="submit" '+(busy?'disabled':'')+'>Send feedback</button><span class="note-small">If the PM accepts it, they implement it.</span></div></form>';
+    var allLog=S.log.concat(((S.remote&&S.remote.changelog)||[]).map(function(r){ return {kind:'applied',title:r.title||r.item_key,note:r.note||'',effects:String(r.effects||'').split('\n').filter(Boolean),at:r.at||''}; })).sort(function(a,b){return String(b.at)>String(a.at)?1:-1});
+    var log=allLog.length? allLog.map(function(l){
+      return '<div class="log"><div class="log-head"><span class="pill plain">'+esc(({accept:'Accepted',reject:'Rejected',delay:'Delayed',reopen:'Reopened',created:'Created',lock:'Prototype',reqdone:'Milestone',invite:'Access',import:'Import',applied:'Agents applied'})[l.kind]||l.kind)+'</span><b>'+esc(l.title)+'</b><span class="note-small mono">'+esc(fmtStamp(l.at))+'</span></div>'+(l.note?'<p class="muted" style="margin-top:4px">'+esc(l.note)+'</p>':'')+((l.effects&&l.effects.length)?'<p class="note-small" style="margin-top:4px">'+l.effects.map(esc).join(' · ')+'</p>':'')+'</div>';
+    }).join('') : '<p class="muted">No changes yet.</p>';
+    $('#sec-artifacts').innerHTML='<span class="eyebrow">Artifacts</span><h2>Everything behind this project</h2>'+
+      artBox('sov','Statement of Value','why, goals, key clients',sov)+
+      artBox('req','Requirements','connected to Confluence · '+S.requirements.length,reqs)+
+      artBox('feedback','Stakeholder Feedback','internal and clients · '+S.cards.length,fb)+
+      artBox('meetings','Meeting Notes and Videos','Drive, Google Meet, standups · '+S.notes.length,notes)+
+      artBox('prototype','Prototype and Design','Claude and Miro',proto)+
+      artBox('log','Change Log','every decision · '+allLog.length,log);
+  }
+
+  function renderModal(){
+    var el=$('#sec-modal');
+    if(!ui.cardOpen){ el.innerHTML=''; return; }
+    var D=ui.drafts, files=D.fcFiles||[], busy=!!(ui.run&&ui.run.active);
+    el.innerHTML='<div class="drawer-backdrop" data-action="close-card"></div><div class="modal" role="dialog" aria-modal="true" aria-labelledby="card-title"><form data-form="card" class="stack" style="gap:12px">'+
+      '<div class="drawer-head" style="margin-bottom:0"><h2 id="card-title">'+(ui.editingCard?'Edit feedback card':'New feedback card')+'</h2><button class="btn small" type="button" data-action="close-card">Cancel</button></div>'+
+      '<p class="note-small">'+(ui.editingCard?'Saving updates the proposal the PM sees, as long as the PM has not decided yet.':'For '+esc(S.project.name)+'. Any stakeholder can add one. The orchestrator reads it and proposes an update; only the PM decides.')+'</p>'+
+      '<div class="grid2"><div class="field"><label for="fc-by">Submitted by</label><input id="fc-by" readonly value="'+esc(personaName())+'"></div>'+
+      '<div class="field"><label for="fc-aud">Who is this from?</label><select id="fc-aud" data-draft="fcAud"><option value="internal">Internal team</option><option value="client"'+(D.fcAud==='client'?' selected':'')+'>A client</option></select></div></div>'+
+      '<div class="field"><label for="fc-body">Feedback</label><textarea id="fc-body" required style="min-height:110px" data-draft="fcBody" placeholder="Describe the use case or requirement, and why it matters.">'+esc(D.fcBody||'')+'</textarea></div>'+
+      '<div class="field"><label for="fc-clients">Clients who requested it, use it or need it</label><input id="fc-clients" data-draft="fcClients" value="'+esc(D.fcClients||'')+'" placeholder="Client A, Client C"></div>'+
+      '<div class="grid2"><div class="field"><label for="fc-loom">Loom video link (optional)</label><input id="fc-loom" type="url" data-draft="fcLoom" value="'+esc(D.fcLoom||'')+'" placeholder="https://www.loom.com/share/..."></div>'+
+      '<div class="field"><label for="fc-files">Screenshots (optional)</label><input id="fc-files" type="file" accept="image/*" multiple data-files="fcFiles"></div></div>'+
+      (files.length?'<p class="note-small">Attached: '+files.map(esc).join(', ')+'. In this prototype only the file names are kept. Choosing new files replaces this list. <button class="btn small" type="button" data-action="clear-files">Remove attachments</button></p>':'')+
+      '<div class="row"><button class="btn primary" type="submit" '+(busy?'disabled':'')+'>'+(ui.editingCard?'Save changes':'Submit card')+'</button><button class="btn" type="button" data-action="close-card">Cancel</button></div></form></div>';
+    var b=$('#fc-body'); if(b && !b.value) b.focus();
+  }
+  function closeCard(){
+    ui.cardOpen=false;
+    if(ui.editingCard){ ui.editingCard=null; ui.drafts.fcBody='';ui.drafts.fcClients='';ui.drafts.fcLoom='';ui.drafts.fcFiles=[];ui.drafts.fcAud=''; }
+    renderModal(); var cb=$('#card-btn'); if(cb) cb.focus();
+  }
+  function renderAll(){ renderNav(); renderProject(); renderProgress(); renderDrawer(); renderModal(); renderMonitor(); renderSlack(); renderArtifacts(); }
+  function toast(msg){ ui.toast=msg; var t=$('#toast'); t.textContent=msg; t.hidden=false; clearTimeout(toast._t); toast._t=setTimeout(function(){t.hidden=true},5000); }
+  function logEntry(o){ o.at=new Date().toISOString(); S.log.unshift(o); }
+
+  /* ---------- decisions ---------- */
+  function decide(key,decision){
+    var it=S.items.find(function(i){return i.key===key});
+    if(!it||!can.approve()||it.status!=='pending') return;
+    var note=(ui.drafts['note:'+key]||'').trim(); if(!note) return;
+    it.status={accept:'accepted',reject:'rejected',delay:'delayed'}[decision];
+    it.decision_notes=note; it.decided_by=S.project.pm; it.decided_at=new Date().toISOString();
+    var fx=[];
+    if(decision==='accept'&&it.type==='milestone'){
+      var b0=S.progress; S.reqDraft=true; S.progress=Math.max(S.progress,35); it.undo={dp:S.progress-b0,reqDraft:true};
+      fx.push('Pad status: Reqs draft done'+(S.progress!==b0?' (progress '+b0+'% to '+S.progress+'%)':''),'Summary regenerated');
+    } else if(decision==='accept'){
+      var cap=S.reqDone?95:49;
+      if(S.progress<cap){ var b=S.progress; S.progress=Math.min(cap,S.progress+5); it.undo=it.undo||{}; it.undo.dp=S.progress-b; fx.push('Progress '+b+'% to '+S.progress+'%'); }
+      if(it.affected.indexOf('Requirements')>-1){ S.requirements.push({id:'R-'+(S.requirements.length+1),text:it.change,from:it.key,sync:'queued'}); it.undo=it.undo||{}; it.undo.req=true; fx.push('Requirement added, Confluence write-back queued'); }
+      if(it.affected.indexOf('Jira')>-1) fx.push('Jira update queued');
+      if(it.affected.indexOf('Timeline')>-1) fx.push('Timeline update queued');
+      if(it.affected.indexOf('Stakeholder Feedback')>-1) fx.push('Feedback card marked reviewed');
+      fx.push('Summary regenerated');
+    }
+    logEntry({kind:decision,title:it.title,note:note,effects:fx,key:key});
+    delete ui.drafts['note:'+key]; delete ui.fresh[key]; ui.expanded=null;
+    save(); renderAll();
+    toast(({accept:'Accepted. ',reject:'Rejected. ',delay:'Delayed. '})[decision]+(fx.length?fx.join('; ')+'.':'Logged in the Change Log.'));
+    if(nconnected()) nDecision(it,it.status);
+  }
+
+  /* ---------- agent pipeline ---------- */
+  var sampleFn; var sampleChecked=false;
+  async function getSample(){
+    if(sampleChecked) return sampleFn;
+    sampleChecked=true;
+    try{ sampleFn=(window.claude&&window.claude.use)? await window.claude.use('sample') : null; }catch(e){ sampleFn=null; }
+    return sampleFn;
+  }
+  function cleanProposal(p,def){
+    var types=['blocker','requirement_change','feedback','comment'];
+    var arr=function(v){ return Array.isArray(v)? v.map(String).filter(Boolean) : (v? [String(v)]:[]); };
+    return {
+      title:String(p.title||'Update from '+def.source).slice(0,140),
+      type:types.indexOf(p.item_type)>-1?p.item_type:def.type,
+      points:arr(p.key_points).slice(0,5), raw:String(p.raw_text||'').slice(0,600),
+      affected:arr(p.affected_sections).filter(function(s){return SECTIONS.indexOf(s)>-1}),
+      change:String(p.proposed_change||'Review and decide.'), impact:String(p.impact||'Not assessed.'),
+      priority:['high','medium','low'].indexOf(p.priority)>-1?p.priority:'medium', reason:String(p.attention_reason||'')
+    };
+  }
+  async function extractLive(sample,inp){
+    var prompt='You are the Orchestrator Agent for a product-management dashboard. Read the input below and PROPOSE action items for the project manager to approve. You never make changes, you only propose. Do not invent facts, owners or dates; if something is unclear, say so in attention_reason.\n\n'+
+      'Reply with only a JSON array of 1 to 3 objects. Each object has: title (short and specific), item_type (one of "blocker","requirement_change","feedback","comment"), key_points (array of 2 to 4 one-sentence strings), raw_text (a short verbatim excerpt from the input), affected_sections (array chosen from '+JSON.stringify(SECTIONS)+'), proposed_change (the concrete update that would apply if accepted), impact (one sentence on goal, scope, timeline or users), priority ("high","medium" or "low"), attention_reason (one sentence on why the PM should look).\n\n'+
+      'Source type: '+inp.source+'\nTitle: '+inp.title+'\nDate: '+inp.date+'\nSubmitted by: '+inp.by+(inp.clients?'\nClients named: '+inp.clients:'')+'\n\nInput:\n'+inp.text.slice(0,12000);
+    var res=await sample.json(prompt,{modelTier:'quick'});
+    if(!Array.isArray(res)) res=(res&&Array.isArray(res.items))?res.items:[res];
+    res=res.filter(function(r){return r&&typeof r==='object'&&r.title}).slice(0,3);
+    if(!res.length) throw {code:'invalid_json'};
+    return res.map(function(r){return cleanProposal(r,inp)});
+  }
+  function sentences(t){ return t.replace(/\s+/g,' ').split(/(?<=[.!?])\s+/).map(function(s){return s.trim()}).filter(function(s){return s.length>25}); }
+  function extractLocal(inp){
+    var ss=sentences(inp.text);
+    var hit=ss.filter(function(s){return /deadline|by (the )?(end|friday|monday|oct|nov)|\b(oct|nov|dec)\w* \d+|need|should|please|add |require|blocked|cannot|not ready|tight/i.test(s)});
+    var pts=(hit.length?hit:ss).slice(0,4).map(function(s){return s.replace(/^[A-Za-z ]{2,24}:\s*/,'').slice(0,170)});
+    var blocked=/blocked|cannot|not ready|blocker/i.test(inp.text);
+    var t=inp.type;
+    if(inp.source==='Meeting Notes') t=blocked&&!/requirement|add /i.test(inp.text)?'blocker':'requirement_change';
+    var aff=[]; if(/requirement|add |tab|view/i.test(inp.text)) aff.push('Requirements'); if(/deadline|demo|oct|nov|date|friday/i.test(inp.text)) aff.push('Timeline'); if(/jira/i.test(inp.text)) aff.push('Jira'); if(!aff.length) aff.push(inp.source==='Feedback Card'?'Stakeholder Feedback':'Summary');
+    var title=inp.source==='Meeting Notes'? 'Updates from "'+inp.title+'"' : (ss[0]||inp.text).slice(0,80);
+    return [cleanProposal({title:title,item_type:t,key_points:pts,raw_text:(hit[0]||ss[0]||inp.text).slice(0,400),affected_sections:aff,proposed_change:'Review these points and update '+aff.join(', ')+' if accepted.',impact:'Keyword-based guess; not assessed by the model.',priority:blocked?'high':'medium',attention_reason:'Found by the scripted fallback, so check the raw text.'},inp)];
+  }
+  async function runAgent(inp){
+    if(ui.run&&ui.run.active) return null;
+    if(nconnected()&&!inp.local) return nRemoteRun(inp);
+    ui.run={active:true,lines:[],mode:'',title:inp.title};
+    var push=function(t,sim){ ui.run.lines.push({t:t,sim:!!sim}); renderMonitor(); renderArtifacts(); };
+    push('Orchestrator Agent received '+inp.source.toLowerCase()+' "'+inp.title+'"');
+    await sleep(500);
+    push('Jira Agent (read-only): looked for related SCRUM issues',true); await sleep(500);
+    push('Slack Agent (read-only): scanned '+((S.slack&&S.slack[0])?S.slack[0].n:'the project channel')+' for related threads',true); await sleep(500);
+    push('get_pending_action_items: '+pending().length+' pending, checking for duplicates');
+    var props, mode;
+    try{
+      var sample=await getSample(); if(!sample) throw {code:'absent'};
+      props=await extractLive(sample,inp); mode='Claude (live)';
+    }catch(e){
+      props=extractLocal(inp);
+      mode='Scripted fallback ('+(e&&e.code==='absent'?'Claude not available in this view':(e&&e.code==='not_granted'?'Claude access was not allowed':'Claude call did not return usable JSON'))+')';
+    }
+    var keys=[];
+    var linkedAll=inp.cardId?S.items.filter(function(x){return x.cardId===inp.cardId&&x.status==='pending'}):[];
+    if(linkedAll.length) props=props.slice(0,linkedAll.length);
+    props.forEach(function(p,i){
+      var linked=linkedAll[i];
+      if(linked){
+        linked.title=p.title; linked.type=p.type; linked.priority=p.priority; linked.points=p.points; linked.raw=p.raw; linked.change=p.change; linked.impact=p.impact; linked.reason=p.reason; linked.clients=inp.clients||'';
+        p.affected.forEach(function(s){ if(linked.affected.indexOf(s)<0) linked.affected.push(s); });
+        push('update_pending_action_item: '+linked.key+' (card was edited)');
+        ui.fresh[linked.key]=true; keys.push(linked.key); return;
+      }
+      var key='scrum-'+slug(inp.source)+'-'+slug(p.title).slice(0,28)+'-'+ymd(inp.date)+'-'+(i+1);
+      var ex=S.items.find(function(x){return x.key===key&&x.status==='pending'});
+      if(ex){
+        p.points.forEach(function(pt){ if(ex.points.indexOf(pt)<0) ex.points.push(pt); });
+        ex.raw=(ex.raw+'\n'+p.raw).slice(0,900);
+        push('update_pending_action_item: '+key+' (merged into existing pending item)');
+      } else {
+        S.items.unshift({key:key,project_key:'SCRUM',title:p.title,source:inp.source,by:inp.by,date:inp.date,type:p.type,priority:p.priority,points:p.points,raw:p.raw,affected:p.affected,change:p.change,impact:p.impact,reason:p.reason,clients:inp.clients||'',cardId:inp.cardId,status:'pending',created:new Date().toISOString()});
+        push('create_action_item: '+p.title+' (status pending)');
+      }
+      ui.fresh[key]=true; keys.push(key);
+    });
+    ui.run.mode=mode; push('Done. '+plural(keys.length,'item')+' waiting for the PM. Nothing on the page changed.');
+    ui.run.active=false; ui.tab='pending'; ui.filter='all';
+    save(); renderAll();
+    return keys;
+  }
+  function applyReqDraft(doc){
+    var now=new Date().toISOString(), note='Added by the PM, so no separate approval was needed. Doc: '+doc.title+'.';
+    S.items.filter(function(x){return x.type==='milestone'&&x.status==='pending'}).forEach(function(x){ x.status='accepted'; x.decision_notes='Confirmed when the PM added the doc.'; x.decided_by=S.project.pm; x.decided_at=now; });
+    if(S.reqDraft){ logEntry({kind:'created',title:'Requirements doc added: '+doc.title,note:'Reqs draft was already done.',effects:[]}); save(); renderAll(); toast('Doc added. Pad status was already at Reqs draft done or later.'); return; }
+    var b=S.progress; S.reqDraft=true; S.progress=Math.max(S.progress,35);
+    var key='scrum-milestone-reqs-draft-'+Date.now();
+    S.items.unshift({key:key,project_key:'SCRUM',title:'Requirements draft added: '+doc.title,source:'Requirements Doc',by:doc.by,date:doc.date,type:'milestone',priority:'medium',points:['A requirements doc was added by the PM: '+doc.title+'.'],raw:doc.title+(doc.url?'\n'+doc.url:''),affected:['Summary','Timeline','Requirements'],change:'Pad status moved to Reqs draft done (35%).',impact:'Moved the progress tracker one step.',reason:'Added by the PM.',clients:'',status:'accepted',decision_notes:note,decided_by:S.project.pm,decided_at:now,created:now,milestone:'reqs-draft',undo:{dp:S.progress-b,reqDraft:true}});
+    logEntry({kind:'accept',title:'Requirements draft added: '+doc.title,note:note,effects:['Pad status: Reqs draft done (progress '+b+'% to '+S.progress+'%)','Summary regenerated'],key:key});
+    ui.tab='decided'; save(); renderAll(); toast('Pad status moved to Reqs draft done ('+S.progress+'%). Logged in the Change Log.');
+  }
+  async function proposeReqMilestone(doc,viaConf){
+    ui.run={active:true,lines:[],mode:'Scripted (no model needed)',title:doc.title};
+    var push=function(t,sim){ ui.run.lines.push({t:t,sim:!!sim}); renderMonitor(); renderArtifacts(); };
+    if(viaConf){ push('Confluence Agent (read-only): found a new page "'+doc.title+'" in the project space',true); await sleep(500); push('Orchestrator Agent received the page as a requirements doc'); }
+    else push('Orchestrator Agent received requirements doc "'+doc.title+'"');
+    await sleep(500);
+    push('get_pending_action_items: '+pending().length+' pending, checking for an existing requirements milestone'); await sleep(500);
+    var ex=S.items.find(function(x){return x.type==='milestone'&&x.status==='pending'});
+    if(S.reqDraft||ex){
+      push(S.reqDraft?'Reqs draft is already done, so no new milestone was proposed. Doc was added to Requirements.':'A milestone is already waiting for the PM, so none was added.');
+    } else {
+      var key='scrum-milestone-reqs-draft-'+Date.now();
+      S.items.unshift({key:key,project_key:'SCRUM',title:'Requirements draft added: '+doc.title,source:viaConf?'Confluence':'Requirements Doc',by:doc.by,date:doc.date,type:'milestone',priority:'medium',points:[(viaConf?'A new requirements page appeared in Confluence: ':'A requirements doc was added: ')+doc.title+'.','Adding a doc suggests the requirements draft is complete.','The PM has not confirmed that the draft is complete.'],raw:doc.title+(doc.url?'\n'+doc.url:''),affected:['Summary','Timeline','Requirements'],change:'Move Pad status to Reqs draft done (35%), update the summary, and record it in the Change Log.',impact:'Moves the progress tracker one step. Requirements are not yet marked done (50%).',reason:'A milestone changes the project status, so the PM confirms it.',clients:'',status:'pending',created:new Date().toISOString(),milestone:'reqs-draft'});
+      ui.fresh[key]=true; ui.tab='pending'; ui.filter='all';
+      push('create_action_item: Requirements draft added (status pending)');
+      push('Done. 1 item waiting for the PM. Nothing on the page changed.');
+    }
+    ui.run.active=false; save(); renderAll();
+  }
+  function scrollToMonitor(){ var el=$('#sec-monitor'); if(el&&el.scrollIntoView) el.scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'}); }
+
+  /* ---------- events ---------- */
+  document.addEventListener('click',function(e){
+    var d=e.target.closest('[data-decide]'); if(d){ decide(d.dataset.key,d.dataset.decide); return; }
+    if(ui.menuOpen && !e.target.closest('.switcher')){ ui.menuOpen=false; renderNav(); }
+    var a=e.target.closest('[data-action]'); if(!a) return;
+    var act=a.dataset.action, v=a.dataset.v, key=a.dataset.key;
+    if(act==='persona'){ G.persona=v; save(); renderAll(); }
+    else if(act==='menu-toggle'){ ui.menuOpen=!ui.menuOpen; renderNav(); }
+    else if(act==='goto'){
+      if(ui.run&&ui.run.active){ ui.menuOpen=false; renderNav(); toast('Wait for the agents to finish before switching projects.'); return; }
+      G.current=a.dataset.id; S=G.projects[G.current]; ui.menuOpen=false; ui.tab='pending'; ui.filter='all'; ui.expanded=null; ui.run=null; ui.fbTab='internal'; ui.drafts={}; ui.fresh={}; ui.open={meetings:true}; ui.importOpen=false;
+      save(); renderAll(); window.scrollTo(0,0);
+    }
+    else if(act==='open-card'){ ui.editingCard=null; ui.cardOpen=true; ui.menuOpen=false; renderModal(); renderNav(); }
+    else if(act==='close-card'){ closeCard(); }
+    else if(act==='edit-card'){ var ec=S.cards.find(function(x){return x.id===a.dataset.id}); if(ec&&canEditCard(ec)){ ui.editingCard=ec.id; ui.drafts.fcAud=ec.audience; ui.drafts.fcBody=ec.body; ui.drafts.fcClients=ec.clients||''; ui.drafts.fcLoom=ec.loom||''; ui.drafts.fcFiles=(ec.files||[]).slice(); ui.cardOpen=true; renderModal(); } }
+    else if(act==='clear-files'){ ui.drafts.fcFiles=[]; renderModal(); }
+    else if(act==='settings-toggle'){ ui.drawerOpen=true; renderDrawer(); renderNav(); var cb=$('#drawer-close'); if(cb) cb.focus(); }
+    else if(act==='close-drawer'){ ui.drawerOpen=false; renderDrawer(); renderNav(); var sb=$('#set-btn'); if(sb) sb.focus(); }
+    else if(act==='tab'){ ui.tab=v; ui.expanded=null; renderMonitor(); }
+    else if(act==='filter'){ ui.filter=v; ui.expanded=null; renderMonitor(); }
+    else if(act==='toggle-item'){ ui.expanded=(ui.expanded===key)?null:key; renderMonitor(); }
+    else if(act==='toggle-section'){ var it=S.items.find(function(i){return i.key===key}); if(it&&can.approve()){ var ix=it.affected.indexOf(v); if(ix>-1) it.affected.splice(ix,1); else it.affected.push(v); save(); renderMonitor(); } }
+    else if(act==='open-raw'){
+      var it2=S.items.find(function(i){return i.key===key}); if(!it2) return;
+      var map={'Meeting Notes':'meetings','Feedback Card':'feedback','Prototype Feedback':'prototype','Jira Comment':'req','Requirements Doc':'req','Confluence':'req'};
+      if(it2.source==='Slack'){ $('#sec-slack').scrollIntoView({block:'center'}); return; }
+      var id=map[it2.source]; ui.open[id]=true; if(id==='feedback') ui.fbTab=(S.cards.find(function(c){return c.id===it2.cardId})||{audience:'internal'}).audience; renderArtifacts(); var t=$('#art-'+id); if(t) t.scrollIntoView({block:'center'});
+    }
+    else if(act==='art'){ ui.open[a.dataset.id]=!ui.open[a.dataset.id]; renderArtifacts(); }
+    else if(act==='fbtab'){ ui.fbTab=v; renderArtifacts(); }
+    else if(act==='reopen'){ var r=S.items.find(function(i){return i.key===key}); if(r&&can.approve()){ var was=r.status, fx2=[]; if(was==='accepted'&&r.undo){ if(r.undo.dp){ S.progress=Math.max(0,S.progress-r.undo.dp); fx2.push('Progress back to '+S.progress+'%'); } if(r.undo.reqDraft){ S.reqDraft=false; fx2.push('Reqs draft done undone'); } if(r.undo.req){ S.requirements=S.requirements.filter(function(q){return q.from!==r.key}); fx2.push('Requirement removed'); } } delete r.undo; r.status='pending'; delete r.decision_notes; delete r.decided_by; delete r.decided_at; if(nconnected()) nDecision(r,'pending'); logEntry({kind:'reopen',title:r.title,note:(was==='delayed'?'Moved back to needs attention.':'Decision changed: was '+was+', moved back for a new decision.'),effects:fx2}); ui.tab='pending'; ui.expanded=r.key; save(); renderAll(); } }
+    else if(act==='sample-note'){ ui.drafts.mnTitle=SAMPLE_NOTE.title; ui.drafts.mnDate=SAMPLE_NOTE.date; ui.drafts.mnText=SAMPLE_NOTE.text; renderArtifacts(); }
+    else if(act==='sim-confluence'){ if(ui.run&&ui.run.active) return; var cd={id:'d'+Date.now(),title:'Reporting Manager requirements (Confluence page)',url:'',by:'Confluence Agent',date:'2026-10-19'}; S.reqDocs=S.reqDocs||[]; S.reqDocs.unshift(cd); ui.open.req=true; save(); renderArtifacts(); proposeReqMilestone(cd,true).then(scrollToMonitor); }
+    else if(act==='goto-links'){ ui.open.prototype=true; renderArtifacts(); var t2=$('#art-prototype'); if(t2) t2.scrollIntoView({block:'center'}); }
+    else if(act==='lock'&&can.control()){ S.protoLocked=!S.protoLocked; logEntry({kind:'lock',title:S.protoLocked?'Prototype locked for review':'Prototype unlocked',note:'',effects:[]}); save(); renderArtifacts(); }
+    else if(act==='req-done'){ if(can.approve()&&!S.reqDone){ S.reqDone=true; var bb=S.progress; S.progress=Math.max(S.progress,50); logEntry({kind:'reqdone',title:'Requirements marked done',note:'',effects:['Progress '+bb+'% to '+S.progress+'%']}); save(); renderAll(); } }
+    else if(act==='reset'){ if(can.approve()){ try{ localStorage.removeItem(KEY); }catch(x){} var keep=G.persona; G=seed(); G.persona=keep; S=G.projects[G.current]; ui.fresh={}; ui.drafts={}; ui.run=null; ui.expanded=null; renderAll(); toast('All sample data restored.'); } }
+    else if(act==='n8n-clear'){ nsave({}); ui.nstatus='Disconnected.'; renderAll(); }
+    else if(act==='n8n-sync'){ nSync(); }
+    else if(act==='n8n-retry'){ var rt=S.items.find(function(i){return i.key===key}); if(rt) nDecision(rt,rt.status); }
+    else if(act==='n8n-test'){ nTest(); }
+    else if(act==='import-toggle'){ ui.importOpen=!ui.importOpen; renderMonitor(); }
+    else if(act==='import-go'){ importRows(); }
+  });
+  document.addEventListener('keydown',function(e){ if(e.key!=='Escape') return; if(ui.cardOpen){ closeCard(); } else if(ui.drawerOpen){ ui.drawerOpen=false; renderDrawer(); renderNav(); var sb=$('#set-btn'); if(sb) sb.focus(); } else if(ui.menuOpen){ ui.menuOpen=false; renderNav(); } });
+  document.addEventListener('input',function(e){
+    var k=e.target.dataset&&e.target.dataset.draft; if(!k) return;
+    ui.drafts[k]=e.target.value;
+    if(k.indexOf('note:')===0){ var box=e.target.closest('.decision'); if(box) box.querySelectorAll('[data-decide]').forEach(function(b){ b.disabled=!e.target.value.trim(); }); }
+  });
+  document.addEventListener('change',function(e){ var fk=e.target.dataset&&e.target.dataset.files; if(fk){ ui.drafts[fk]=Array.prototype.map.call(e.target.files||[],function(f){return f.name}); renderModal(); return; }
+    var k=e.target.dataset&&e.target.dataset.draft; if(k&&e.target.tagName==='SELECT') ui.drafts[k]=e.target.value; });
+  document.addEventListener('submit',async function(e){
+    var f=e.target.closest('[data-form]'); if(!f) return; e.preventDefault();
+    var kind=f.dataset.form, D=ui.drafts;
+    if(kind==='invite'){
+      if(!can.invite()||!D.invEmail) return;
+      S.stakeholders.push({name:D.invEmail,role:D.invRole||'dev'}); logEntry({kind:'invite',title:'Invited '+D.invEmail+' as '+PERSONAS[D.invRole||'dev'],note:'Invite recorded. Email sending is not connected in this prototype.',effects:[]});
+      D.invEmail=''; save(); renderAll(); toast('Invite recorded.');
+    } else if(kind==='notes'){
+      if(!D.mnText||D.mnText.trim().length<20) { toast('Add the notes or transcript first.'); return; }
+      var id='n'+Date.now(), note={id:id,title:D.mnTitle||'Meeting notes',date:D.mnDate||'2026-10-16',by:personaName(),status:'processing',text:D.mnText};
+      S.notes.unshift(note); var snap={title:note.title,date:note.date,text:note.text}; D.mnTitle='';D.mnText='';
+      renderArtifacts();
+      var keys=await runAgent({source:'Meeting Notes',title:snap.title,date:snap.date,by:personaName(),text:snap.text,type:'requirement_change'});
+      note.status=keys?'processed':'not processed'; save(); renderArtifacts(); scrollToMonitor();
+    } else if(kind==='card'){
+      if(!D.fcBody||!D.fcBody.trim()) return;
+      if(ui.run&&ui.run.active){ toast('The agents are still working. Try again in a moment.'); return; }
+      var loom=(D.fcLoom||'').trim(); if(loom&&!/^https:\/\//.test(loom)){ toast('The Loom link should start with https://'); return; }
+      if(ui.editingCard){
+        var ec2=S.cards.find(function(x){return x.id===ui.editingCard});
+        if(!ec2||!canEditCard(ec2)){ toast('This card can no longer be edited.'); closeCard(); renderArtifacts(); return; }
+        ec2.audience=D.fcAud||'internal'; ec2.body=D.fcBody.trim(); ec2.clients=(D.fcClients||'').trim(); ec2.loom=loom; ec2.files=(D.fcFiles||[]).slice(); ec2.edited='2026-10-16';
+        ui.fbTab=ec2.audience; ui.open.feedback=true;
+        var etxt=ec2.body+(ec2.clients?'\nClients: '+ec2.clients:'')+(loom?'\nLoom video: '+loom:'')+(ec2.files.length?'\nAttachments: '+ec2.files.join(', '):'');
+        var hasPending=S.items.some(function(x){return x.cardId===ec2.id&&x.status==='pending'});
+        var eid=ec2.id, ebody=ec2.body, ecl=ec2.clients;
+        closeCard(); save(); renderArtifacts();
+        if(hasPending){ await runAgent({source:'Feedback Card',title:ebody.slice(0,60),date:'2026-10-16',by:personaName(),text:etxt,clients:ecl,type:'feedback',cardId:eid}); scrollToMonitor(); }
+        else { toast('Card updated.'); }
+        return;
+      }
+      var aud=D.fcAud||'internal', cid='c'+Date.now(), body=D.fcBody.trim(), cl=(D.fcClients||'').trim(), fl=D.fcFiles||[];
+      S.cards.unshift({id:cid,owner:G.persona,audience:aud,by:personaName(),date:'2026-10-16',clients:cl,body:body,loom:loom,files:fl}); ui.fbTab=aud; ui.open.feedback=true;
+      var txt=body+(cl?'\nClients: '+cl:'')+(loom?'\nLoom video: '+loom:'')+(fl.length?'\nAttachments: '+fl.join(', '):'');
+      D.fcBody='';D.fcClients='';D.fcLoom='';D.fcFiles=[]; ui.cardOpen=false; save(); renderModal(); renderArtifacts();
+      await runAgent({source:'Feedback Card',title:body.slice(0,60),date:'2026-10-16',by:personaName(),text:txt,clients:cl,type:'feedback',cardId:cid}); scrollToMonitor();
+    } else if(kind==='n8n'){
+      if(!can.approve()) return;
+      var nb=(D.nBase!==undefined?D.nBase:ncfg().base||'').trim().replace(/\/+$/,''), nk=(D.nKey!==undefined?D.nKey:ncfg().key||'').trim();
+      if(nb&&!nok(nb)){ ui.nstatus='The URL must start with https:// (http://localhost is also fine for a local n8n).'; renderDrawer(); return; }
+      nsave({base:nb,key:nk}); ui.nstatus=nb?'Saved. Use Test connection, then Sync from n8n in the Status Monitor.':'Saved, but a base URL is needed to connect.'; renderAll();
+    } else if(kind==='reqdoc'){
+      var rt=(D.rdTitle||'').trim(), ru=(D.rdUrl||'').trim(); if(!rt) return;
+      if(ru&&!/^https:\/\//.test(ru)){ toast('Link must start with https://'); return; }
+      S.reqDocs=S.reqDocs||[]; var doc={id:'d'+Date.now(),title:rt,url:ru,by:personaName(),date:'2026-10-19'}; S.reqDocs.unshift(doc);
+      D.rdTitle='';D.rdUrl=''; ui.open.req=true; save(); renderArtifacts();
+      if(can.approve()){ applyReqDraft(doc); scrollToMonitor(); } else { await proposeReqMilestone(doc); scrollToMonitor(); }
+    } else if(kind==='links'){
+      if(!can.control()) return;
+      var lp=(D.lkProto!==undefined?D.lkProto:((S.links||{}).prototype||'')).trim(), lm=(D.lkMiro!==undefined?D.lkMiro:((S.links||{}).miro||'')).trim();
+      if((lp&&!/^https:\/\//.test(lp))||(lm&&!/^https:\/\//.test(lm))){ toast('Links must start with https://'); return; }
+      S.links={prototype:lp,miro:lm}; delete D.lkProto; delete D.lkMiro; save(); renderProject(); renderArtifacts(); toast('Links saved.');
+    } else if(kind==='proto'){
+      if(!D.pfBody||!D.pfBody.trim()) return;
+      var pb=D.pfBody.trim(); S.protoComments.unshift({id:'p'+Date.now(),by:personaName(),date:'2026-10-16',clients:'',body:pb}); D.pfBody='';
+      renderArtifacts();
+      await runAgent({source:'Prototype Feedback',title:pb.slice(0,60),date:'2026-10-16',by:personaName(),text:pb,type:'comment'}); scrollToMonitor();
+    }
+  });
+  function importRows(rowsIn,label,quiet){
+    var raw=ui.drafts.import||''; var rows;
+    if(rowsIn) rows=rowsIn; else try{ rows=JSON.parse(raw); if(!Array.isArray(rows)) rows=rows.data||rows.rows||[]; }catch(err){ toast('That is not valid JSON. Paste the rows exactly as exported.'); return; }
+    var n=0, types=['blocker','requirement_change','feedback','comment','milestone'];
+    rows.forEach(function(r){
+      if(!r||!r.item_key||S.items.some(function(i){return i.key===r.item_key})) return;
+      var pts=String(r.key_points||'').split('\n').map(function(s){return s.replace(/^\s*-\s*/,'').trim()}).filter(Boolean);
+      var src=String(r.source||'Meeting Notes'); var st=['pending','accepted','rejected','delayed'].indexOf(r.status)>-1?r.status:'pending';
+      S.items.unshift({key:r.item_key,project_key:r.project_key||'SCRUM',title:r.title||r.item_key,source:src,by:r.submitted_by||'n8n',date:String(r.source_date||'').slice(0,10)||'2026-10-16',
+        type:types.indexOf(r.item_type)>-1?r.item_type:(src==='Feedback Card'?'feedback':(src==='Meeting Notes'?'requirement_change':'comment')),
+        priority:['high','medium','low'].indexOf(r.priority)>-1?r.priority:'medium',points:pts.length?pts:['(no key points)'],raw:r.raw_text||'',
+        affected:String(r.affected_sections||'').split(',').map(function(s){return s.trim()}).filter(function(s){return SECTIONS.indexOf(s)>-1}),
+        change:r.proposed_change||'',impact:r.impact||'',reason:r.attention_reason||'',clients:'',cardId:((String(r.source_ref||'').match(/launchpad-card:([^;\s]+)/)||[])[1]||undefined),status:st,created:new Date().toISOString()});
+      ui.fresh[r.item_key]=true; n++;
+    });
+    if(n){ logEntry({kind:'import',title:(label==='n8n sync'?'Synced ':'Imported ')+plural(n,'item')+' from the n8n Action Items table',note:'',effects:[]}); ui.drafts.import=''; ui.importOpen=false; save(); renderAll(); if(quiet!=='silent') toast(plural(n,'item')+' added to the queue.'); }
+    else if(quiet!=='silent'&&!quiet) toast('No new rows found. Rows need an item_key that is not already on the page.');
+    else if(quiet!=='silent') toast('Already up to date. No new pending items in n8n.');
+    return n;
+  }
+
+  renderAll();
+})();
+</script>
