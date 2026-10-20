@@ -30,8 +30,8 @@ async function forward(request: Request, name: string, method: "GET" | "POST") {
   try {
     const r = await fetch(out.toString(), {
       method,
-      body,
-      headers: method === "POST" ? { "content-type": "application/x-www-form-urlencoded" } : undefined,
+      body: body ?? null,
+      headers: method === "POST" ? { "content-type": "application/x-www-form-urlencoded" } : {},
       signal: AbortSignal.timeout(12000),
     });
     const text = await r.text();
