@@ -370,7 +370,8 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
   function save(){ try{ localStorage.setItem(KEY,JSON.stringify(G)); }catch(e){} }
   /* ---------- n8n connection (webhooks) ---------- */
   var NKEY='launchpad-n8n-cfg';
-  function ncfg(){ var c={}; try{ c=JSON.parse(localStorage.getItem(NKEY)||'{}')||{}; }catch(e){} if(!c.base&&c.itemsUrl) c.base=String(c.itemsUrl).replace(/\/launchpad-items.*$/,''); return c; }
+  var NDEFAULT='https://jlm.app.n8n.cloud/webhook';
+  function ncfg(){ var c={}; try{ c=JSON.parse(localStorage.getItem(NKEY)||'{}')||{}; }catch(e){} if(!c.base&&c.itemsUrl) c.base=String(c.itemsUrl).replace(/\/launchpad-items.*$/,''); if(c.base===undefined) c.base=NDEFAULT; return c; }
   function nsave(c){ try{ localStorage.setItem(NKEY,JSON.stringify(c)); }catch(e){} }
   function nconnected(){ return !!ncfg().base; }
   function nep(name){ return String(ncfg().base||'').replace(/\/+$/,'')+'/launchpad-'+name; }
@@ -391,10 +392,11 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
   }
   async function nSync(){
     var c=ncfg(); if(!nconnected()) return;
+    if(!c.key){ ui.nNeedKey=true; ui.nstatus='Enter your n8n access key to load the pending items.'; console.warn('[n8n] no access key saved in this browser; skipping fetch'); renderMonitor(); return; }
     ui.nbusy=true; renderMonitor();
     try{ var j=await nfetch(nurl(nep('items'),{project_key:S.project.jira||'SCRUM',key:c.key}));
-      var rows=Array.isArray(j)?j:(j.items||j.data||j.rows||[]); importRows(rows,'n8n sync',true); await nState(true); ui.nstatus='Synced '+new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})+'. '+rows.length+' pending row'+(rows.length===1?'':'s')+' in n8n.';
-    }catch(e){ ui.nstatus=nerr(e); toast(nerr(e)); }
+      var rows=Array.isArray(j)?j:(j.items||j.data||j.rows||[]); console.log('[n8n] rendering',rows.length,'item(s)'); ui.nNeedKey=false; ui.tab='pending'; ui.filter='all'; importRows(rows,'n8n sync',true); await nState(true); ui.nstatus='Synced '+new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})+'. '+rows.length+' pending row'+(rows.length===1?'':'s')+' in n8n.';
+    }catch(e){ if(e&&e.status===401) ui.nNeedKey=true; ui.nstatus=nerr(e); toast(nerr(e)); }
     ui.nbusy=false; renderMonitor(); if(ui.drawerOpen) renderDrawer();
   }
   async function nState(silent){
@@ -579,6 +581,8 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
       (function(){ var ns=S.remote&&S.remote.sections&&S.remote.sections.next_steps; if(!ns||!ns.content) return ''; var ls=String(ns.content).split('\n').map(function(x){return x.replace(/^\s*[-*]\s*/,'').trim()}).filter(Boolean); return '<div class="decision" style="margin:10px 0"><h4 class="eyebrow">Next steps (written by the agents)</h4><ul>'+ls.map(function(x){return '<li>'+esc(x)+'</li>'}).join('')+'</ul></div>'; })()+
       (ui.stateMsg?'<p class="note-small mono" role="status">'+esc(ui.stateMsg)+'</p>':'')+
       (nconnected()?'<p class="note-small mono">Connected to n8n. Proposals come from the Orchestrator Agent; accepted decisions go to the Updater Agent.</p>':'<p class="note-small mono">Agents propose. Only a PM decision changes the page. Jira, Slack, Confluence and Drive lookups are simulated here; n8n is not connected yet.</p>')+
+      (nconnected()&&ui.nstatus?'<p class="note-small" role="status">'+esc(ui.nstatus)+'</p>':'')+
+      (nconnected()&&ui.nNeedKey?'<form data-form="n8nkey" class="decision row" style="margin-top:10px;gap:8px;align-items:flex-end"><div class="field" style="flex:1;min-width:220px"><label for="nk-quick">n8n access key</label><input id="nk-quick" data-draft="nKeyQuick" autocomplete="off" value="'+esc(ui.drafts.nKeyQuick||'')+'"></div><button class="btn primary small" type="submit">Load items</button></form>':'')+
       (ui.importOpen&&can.approve()?'<div class="decision" style="margin-top:12px"><label for="imp">Paste rows exported from the n8n "Action Items" data table (JSON array)</label><textarea id="imp" data-draft="import" placeholder=\'[{"item_key":"...","title":"...","status":"pending", ...}]\'>'+esc(ui.drafts.import||'')+'</textarea><div class="row" style="margin-top:8px"><button class="btn primary small" type="button" data-action="import-go">Add to queue</button></div></div>':'')+
       run+
       '<div class="tabs" role="tablist">'+[['pending','Needs attention ('+pending().length+')'],['delayed','Delayed ('+c.delayed+')'],['decided','Decided ('+c.decided+')']].map(function(t){return '<button role="tab" type="button" data-action="tab" data-v="'+t[0]+'" aria-selected="'+(ui.tab===t[0])+'">'+t[1]+'</button>'}).join('')+'</div>'+
@@ -930,6 +934,9 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
       var txt=body+(cl?'\nClients: '+cl:'')+(loom?'\nLoom video: '+loom:'')+(fl.length?'\nAttachments: '+fl.join(', '):'');
       D.fcBody='';D.fcClients='';D.fcLoom='';D.fcFiles=[]; ui.cardOpen=false; save(); renderModal(); renderArtifacts();
       await runAgent({source:'Feedback Card',title:body.slice(0,60),date:'2026-10-16',by:personaName(),text:txt,clients:cl,type:'feedback',cardId:cid}); scrollToMonitor();
+    } else if(kind==='n8nkey'){
+      var qk=(D.nKeyQuick||'').trim(); if(!qk) return;
+      var qc=ncfg(); nsave({base:qc.base||NDEFAULT,key:qk}); D.nKeyQuick=''; ui.nNeedKey=false; ui.nstatus='Loading items from n8n...'; renderMonitor(); await nSync();
     } else if(kind==='n8n'){
       if(!can.approve()) return;
       var nb=(D.nBase!==undefined?D.nBase:ncfg().base||'').trim().replace(/\/+$/,''), nk=(D.nKey!==undefined?D.nKey:ncfg().key||'').trim();
