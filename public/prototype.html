@@ -557,7 +557,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
       '<div><h4>Key points</h4><ul>'+it.points.map(function(p){return '<li>'+esc(p)+'</li>'}).join('')+'</ul></div>'+
       '<div><h4>Proposed change</h4><p>'+esc(it.change)+'</p></div>'+
       '<div><h4>Suggested impact (agent guess)</h4><p>'+esc(it.impact)+'</p><div class="row" style="margin-top:6px">'+chips+'</div></div>'+
-      '<div><button class="btn small" type="button" data-action="open-raw" data-key="'+esc(it.key)+'">Open raw artifact: '+esc(it.source)+'</button><details style="margin-top:8px"><summary>Raw text from source</summary><blockquote>'+esc(it.raw)+'</blockquote></details></div>'+
+      '<div><button class="btn small" type="button" data-action="open-raw" data-key="'+esc(it.key)+'">Open raw artifact: '+esc(it.source)+'</button>'+(it.link?' <a class="btn small" href="'+esc(it.link)+'" target="_blank" rel="noopener noreferrer">Open source link</a>':'')+'<details style="margin-top:8px"><summary>Raw text from source</summary><blockquote>'+esc(it.raw)+'</blockquote></details></div>'+
       '</div><div>'+decision+'</div></div></div>';
   }
 
@@ -953,21 +953,26 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
   });
   function importRows(rowsIn,label,quiet){
     var raw=ui.drafts.import||''; var rows;
-    if(rowsIn) rows=rowsIn; else try{ rows=JSON.parse(raw); if(!Array.isArray(rows)) rows=rows.data||rows.rows||[]; }catch(err){ toast('That is not valid JSON. Paste the rows exactly as exported.'); return; }
+    if(rowsIn) rows=rowsIn; else try{ rows=JSON.parse(raw); if(!Array.isArray(rows)) rows=rows.items||rows.data||rows.rows||[]; }catch(err){ toast('That is not valid JSON. Paste the rows exactly as exported.'); return; }
     var n=0, types=['blocker','requirement_change','feedback','comment','milestone'];
-    rows.forEach(function(r){
-      if(!r||!r.item_key||S.items.some(function(i){return i.key===r.item_key})) return;
-      var pts=String(r.key_points||'').split('\n').map(function(s){return s.replace(/^\s*-\s*/,'').trim()}).filter(Boolean);
+    var list=function(v){ return Array.isArray(v)? v.map(function(s){return String(s)}).filter(Boolean) : String(v||'').split('\n').map(function(s){return s.replace(/^\s*-\s*/,'').trim()}).filter(Boolean); };
+    var sects=function(v){ var a=Array.isArray(v)? v.map(function(s){return String(s).trim()}) : String(v||'').split(',').map(function(s){return s.trim()}); return a.filter(function(s){return SECTIONS.indexOf(s)>-1}); };
+    var prio=function(r){ if(['high','medium','low'].indexOf(r.priority)>-1) return r.priority; var rk=parseInt(r.priority_rank,10); if(!isNaN(rk)) return rk<=1?'high':(rk>=3?'low':'medium'); return 'medium'; };
+    rows.forEach(function(r,idx){
+      if(!r||typeof r!=='object') return;
+      var key=String(r.item_key||r.key||('n8n-'+Date.now()+'-'+idx));
+      if(S.items.some(function(i){return i.key===key})) return;
+      var pts=list(r.key_points);
       var src=String(r.source||'Meeting Notes'); var st=['pending','accepted','rejected','delayed'].indexOf(r.status)>-1?r.status:'pending';
-      S.items.unshift({key:r.item_key,project_key:r.project_key||'SCRUM',title:r.title||r.item_key,source:src,by:r.submitted_by||'n8n',date:String(r.source_date||'').slice(0,10)||'2026-10-16',
+      S.items.unshift({key:key,project_key:r.project_key||'SCRUM',title:String(r.title||key),source:src,by:r.submitted_by||'n8n',date:String(r.source_date||'').slice(0,10)||'2026-10-16',
         type:types.indexOf(r.item_type)>-1?r.item_type:(src==='Feedback Card'?'feedback':(src==='Meeting Notes'?'requirement_change':'comment')),
-        priority:['high','medium','low'].indexOf(r.priority)>-1?r.priority:'medium',points:pts.length?pts:['(no key points)'],raw:r.raw_text||'',
-        affected:String(r.affected_sections||'').split(',').map(function(s){return s.trim()}).filter(function(s){return SECTIONS.indexOf(s)>-1}),
-        change:r.proposed_change||'',impact:r.impact||'',reason:r.attention_reason||'',clients:'',cardId:((String(r.source_ref||'').match(/launchpad-card:([^;\s]+)/)||[])[1]||undefined),status:st,created:new Date().toISOString()});
-      ui.fresh[r.item_key]=true; n++;
+        priority:prio(r),points:pts.length?pts:['(no key points)'],raw:String(r.raw_text||''),
+        affected:sects(r.affected_sections),
+        change:r.proposed_change?String(r.proposed_change):'Review and decide.',impact:r.impact?String(r.impact):'Not assessed.',reason:r.attention_reason?String(r.attention_reason):'',link:r.source_link?String(r.source_link):'',clients:'',cardId:((String(r.source_ref||'').match(/launchpad-card:([^;\s]+)/)||[])[1]||undefined),status:st,created:new Date().toISOString()});
+      ui.fresh[key]=true; n++;
     });
     if(n){ logEntry({kind:'import',title:(label==='n8n sync'?'Synced ':'Imported ')+plural(n,'item')+' from the n8n Action Items table',note:'',effects:[]}); ui.drafts.import=''; ui.importOpen=false; save(); renderAll(); if(quiet!=='silent') toast(plural(n,'item')+' added to the queue.'); }
-    else if(quiet!=='silent'&&!quiet) toast('No new rows found. Rows need an item_key that is not already on the page.');
+    else if(quiet!=='silent'&&!quiet) toast('No new rows found. Every row is added, even when some fields are empty; only exact duplicates are skipped.');
     else if(quiet!=='silent') toast('Already up to date. No new pending items in n8n.');
     return n;
   }
