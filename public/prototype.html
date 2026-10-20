@@ -481,7 +481,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
     delayed:S.items.filter(function(i){return i.status==='delayed'}).length,
     decided:S.items.filter(function(i){return i.status==='accepted'||i.status==='rejected'}).length
   }; }
-  function stage(){ var p=S.progress; return p<35?'planning and requirements gathering is in progress': p<50?'the requirements draft is done and in review': (p<75?'requirements are complete and the project is moving into build':'the build is in evaluation and moving toward handoff'); }
+  function stage(){ var p=S.progress; if(p<50&&!S.reqDone&&S.reqDraft) return 'the requirements draft is live and in review'; return p<35?'planning and requirements gathering is in progress': p<50?'the requirements draft is done and in review': (p<75?'requirements are complete and the project is moving into build':'the build is in evaluation and moving toward handoff'); }
   function summaryText(){
     var c=counts(), top=sortItems(pending())[0], parts=[];
     if(c.blocker) parts.push(plural(c.blocker,'blocker'));
@@ -489,7 +489,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
     if(c.requirement_change) parts.push(plural(c.requirement_change,'requirement change'));
     if(c.feedback) parts.push(plural(c.feedback,'feedback card'));
     if(c.comment) parts.push(plural(c.comment,'comment'));
-    var s1=S.progress>=100? S.project.name+' has reached handoff.' : S.project.name+' is currently in '+(S.progress<35?'planning and requirements gathering is in progress':(S.progress<50?'planning, and the requirements draft is done and in review':(S.progress<75?'build, and requirements are complete':'evaluation, moving toward handoff')))+'.';
+    var s1=S.progress>=100? S.project.name+' has reached handoff.' : S.project.name+' is currently in '+(S.progress<50&&!S.reqDone&&(S.reqDraft||S.progress>=35)?'planning, and the requirements draft is live and in review':S.progress<35?'planning and requirements gathering is in progress':(S.progress<50?'planning, and the requirements draft is live and in review':(S.progress<75?'build, and requirements are complete':'evaluation, moving toward handoff')))+'.';
     var s2=parts.length? 'You have '+parts.join(', ').replace(/, ([^,]*)$/,(parts.length>2?', and ':' and ')+'$1')+' to review.' : 'Nothing is waiting for your decision.';
     var s3=top? 'Next step: decide on "'+top.title+'"'+(c.delayed?' ('+c.delayed+' delayed).':'.') : (c.delayed? plural(c.delayed,'item')+' delayed; revisit when ready.':'Add meeting notes or feedback to start the next round.');
     var rs=S.remote&&S.remote.sections&&S.remote.sections.summary&&S.remote.sections.summary.content; if(rs) s1=String(rs).trim();
@@ -732,6 +732,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
     } else if(decision==='accept'){
       var cap=S.reqDone?95:49;
       if(S.progress<cap){ var b=S.progress; S.progress=Math.min(cap,S.progress+5); it.undo=it.undo||{}; it.undo.dp=S.progress-b; fx.push('Progress '+b+'% to '+S.progress+'%'); }
+      if(!S.reqDraft&&/requirement/i.test((it.title||'')+' '+(it.source||'')+' '+(it.change||''))&&/draft|doc|page|live|publish|ready|complete/i.test((it.title||'')+' '+(it.change||''))){ S.reqDraft=true; it.undo=it.undo||{}; it.undo.reqDraft=true; fx.push('Pad status: Reqs draft live','Summary regenerated'); }
       if(it.affected.indexOf('Requirements')>-1){ S.requirements.push({id:'R-'+(S.requirements.length+1),text:it.change,from:it.key,sync:'queued'}); it.undo=it.undo||{}; it.undo.req=true; fx.push('Requirement added, Confluence write-back queued'); }
       if(it.affected.indexOf('Jira')>-1) fx.push('Jira update queued');
       if(it.affected.indexOf('Timeline')>-1) fx.push('Timeline update queued');
