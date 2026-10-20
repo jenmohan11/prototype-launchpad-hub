@@ -384,11 +384,13 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
   }
   async function nfetch(url,opts){
     var ac=new AbortController(), t=setTimeout(function(){ac.abort()},12000);
-    try{ opts=opts||{}; opts.signal=ac.signal; opts.mode='cors'; var r=await fetch(url,opts); if(!r.ok){ var er=new Error('http'); er.status=r.status; throw er; } return await r.json(); }
+    var shown=String(url).replace(/([?&]key=)[^&]*/,'$1…');
+    try{ opts=opts||{}; opts.signal=ac.signal; opts.mode='cors'; console.log('[n8n] fetch',opts.method||'GET',shown); var r=await fetch(url,opts); console.log('[n8n] status',r.status,shown); if(!r.ok){ var er=new Error('http'); er.status=r.status; throw er; } var j=await r.json(); console.log('[n8n] data',j); return j; }
+    catch(e){ console.warn('[n8n] fetch failed',shown,e); throw e; }
     finally{ clearTimeout(t); }
   }
   async function nSync(){
-    var c=ncfg(); if(!nconnected()||!can.approve()) return;
+    var c=ncfg(); if(!nconnected()) return;
     ui.nbusy=true; renderMonitor();
     try{ var j=await nfetch(nurl(nep('items'),{project_key:S.project.jira||'SCRUM',key:c.key}));
       var rows=Array.isArray(j)?j:(j.items||j.data||j.rows||[]); importRows(rows,'n8n sync',true); await nState(true); ui.nstatus='Synced '+new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})+'. '+rows.length+' pending row'+(rows.length===1?'':'s')+' in n8n.';
@@ -978,5 +980,6 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
   }
 
   renderAll();
+  if(nconnected()) nSync();
 })();
 </script>
