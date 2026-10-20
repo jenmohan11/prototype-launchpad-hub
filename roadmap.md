@@ -1,0 +1,1 @@
+- Server-side n8n proxy (no key in browser) — done
