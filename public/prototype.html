@@ -370,16 +370,18 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
   function save(){ try{ localStorage.setItem(KEY,JSON.stringify(G)); }catch(e){} }
   /* ---------- n8n connection (webhooks) ---------- */
   var NKEY='launchpad-n8n-cfg';
-  var NDEFAULT='https://jlm.app.n8n.cloud/webhook';
-  function ncfg(){ var c={}; try{ c=JSON.parse(localStorage.getItem(NKEY)||'{}')||{}; }catch(e){} if(!c.base&&c.itemsUrl) c.base=String(c.itemsUrl).replace(/\/launchpad-items.*$/,''); if(c.base===undefined) c.base=NDEFAULT; return c; }
-  function nsave(c){ try{ localStorage.setItem(NKEY,JSON.stringify(c)); }catch(e){} }
+    /* n8n address and key live on the server; the page talks to the same-origin proxy only. */
+  try{ localStorage.removeItem(NKEY); }catch(e){}
+  function ncfg(){ return {base:'/api/n8n',key:''}; }
+  function nsave(c){}
   function nconnected(){ return !!ncfg().base; }
   function nep(name){ return String(ncfg().base||'').replace(/\/+$/,'')+'/launchpad-'+name; }
   function nok(u){ return /^(https:\/\/|http:\/\/(localhost|127\.0\.0\.1)(:|\/|$))/.test(u); }
   function nurl(base,params){ var u=base+(base.indexOf('?')>-1?'&':'?'); return u+Object.keys(params).filter(function(k){return params[k]}).map(function(k){return encodeURIComponent(k)+'='+encodeURIComponent(params[k])}).join('&'); }
   function nerr(e){
     if(e&&e.name==='AbortError') return 'n8n did not answer in 12 seconds.';
-    if(e&&e.status===401) return 'n8n rejected the access key.';
+    if(e&&e.status===401) return 'n8n rejected the access key stored on the server.';
+    if(e&&e.status===503) return 'n8n is not set up on the server yet.';
     if(e&&e.status) return 'n8n answered with an error ('+e.status+').';
     return 'Could not reach n8n. Check the URL, that the workflow is active, and that you opened the standalone file. The page published on claude.ai blocks calls to outside addresses.';
   }
@@ -392,22 +394,21 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
   }
   async function nSync(){
     var c=ncfg(); if(!nconnected()) return;
-    if(!c.key){ ui.nNeedKey=true; ui.nstatus='Enter your n8n access key to load the pending items.'; console.warn('[n8n] no access key saved in this browser; skipping fetch'); renderMonitor(); return; }
     ui.nbusy=true; renderMonitor();
     try{ var j=await nfetch(nurl(nep('items'),{project_key:S.project.jira||'SCRUM',key:c.key}));
       var rows=Array.isArray(j)?j:(j.items||j.data||j.rows||[]); console.log('[n8n] rendering',rows.length,'item(s)'); ui.nNeedKey=false; ui.tab='pending'; ui.filter='all'; importRows(rows,'n8n sync',true); await nState(true); ui.nstatus='Synced '+new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})+'. '+rows.length+' pending row'+(rows.length===1?'':'s')+' in n8n.';
-    }catch(e){ if(e&&e.status===401) ui.nNeedKey=true; ui.nstatus=nerr(e); toast(nerr(e)); }
+    }catch(e){ ui.nstatus=nerr(e); toast(nerr(e)); }
     ui.nbusy=false; renderMonitor(); if(ui.drawerOpen) renderDrawer();
   }
   async function nCheck(){
     var c=ncfg();
-    if(!c.key){ ui.nNeedKey=true; ui.ncheck={state:'fail',title:'No access key saved',detail:'Enter your n8n access key in the box above, then retry.'}; renderMonitor(); return; }
     ui.ncheck={state:'busy',title:'Testing the connection...',detail:'Checking your key and the approvals address.'}; renderMonitor();
     var t0=Date.now();
     try{ var j=await nfetch(nurl(nep('items'),{project_key:S.project.jira||'SCRUM',key:c.key})); var rows=Array.isArray(j)?j:(j.items||j.data||j.rows||[]);
-      ui.nNeedKey=false; ui.ncheck={state:'ok',title:'Connection works',detail:'Your key was accepted and the approvals list answered in '+((Date.now()-t0)/1000).toFixed(1)+'s with '+rows.length+' pending item'+(rows.length===1?'':'s')+'.'};
+      ui.nNeedKey=false; ui.ncheck={state:'ok',title:'Connection works',detail:'The server key was accepted and the approvals list answered in '+((Date.now()-t0)/1000).toFixed(1)+'s with '+rows.length+' pending item'+(rows.length===1?'':'s')+'.'};
     }catch(e){
-      if(e&&e.status===401){ ui.nNeedKey=true; ui.ncheck={state:'fail',title:'Access key rejected',detail:'n8n is reachable, but it did not accept the saved key. Enter the correct key above, then retry.'}; }
+      if(e&&e.status===401){ ui.ncheck={state:'fail',title:'Access key rejected',detail:'n8n is reachable, but it did not accept the access key stored on the server. Update N8N_ACCESS_KEY in the project settings, then retry.'}; }
+      else if(e&&e.status===503){ ui.ncheck={state:'fail',title:'n8n is not set up on the server',detail:'The n8n address or access key is missing from the project settings.'}; }
       else if(e&&e.status){ ui.ncheck={state:'fail',title:'n8n answered with an error ('+e.status+')',detail:e.status===404?'The approvals address was not found. Check that the workflow is active in n8n.':'Check that the workflow is active in n8n, then retry.'}; }
       else ui.ncheck={state:'fail',title:'Could not reach n8n',detail:nerr(e)};
     }
@@ -545,7 +546,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
       '<section><h3>Stakeholders ('+S.stakeholders.length+') on '+esc(S.project.name)+'</h3><ul class="plain">'+S.stakeholders.map(function(s){return '<li><span>'+esc(s.name)+'</span><span class="pill plain">'+PERSONAS[s.role]+'</span></li>'}).join('')+'</ul>'+inviteForm+'</section>'+
       '<section><h3>What each persona can do</h3><div class="tablewrap"><table><thead><tr><th>Capability</th><th>Admin</th><th>Dev</th><th>Business</th></tr></thead><tbody>'+
       rows.map(function(r){return '<tr><td>'+r[0]+'</td>'+yn(r[1])+yn(r[2])+yn(r[3])+'</tr>'}).join('')+'</tbody></table></div></section>'+
-      (can.approve()?'<section><h3>n8n connection</h3><form data-form="n8n" class="stack" style="gap:10px"><div class="field"><label for="n-base">n8n webhook base URL</label><input id="n-base" type="url" data-draft="nBase" value="'+esc(ui.drafts.nBase!==undefined?ui.drafts.nBase:(ncfg().base||''))+'" placeholder="https://your-account.app.n8n.cloud/webhook"></div><div class="field"><label for="n-key">Access key (optional, must match the key in the workflow)</label><input id="n-key" data-draft="nKey" autocomplete="off" value="'+esc(ui.drafts.nKey!==undefined?ui.drafts.nKey:(ncfg().key||''))+'"></div><div class="row"><button class="btn primary small" type="submit">Save connection</button><button class="btn small" type="button" data-action="n8n-test">Test connection</button>'+(nconnected()?'<button class="btn small" type="button" data-action="n8n-clear">Disconnect</button>':'')+'</div><p class="note-small" role="status">'+esc(ui.nstatus||(nconnected()?'Connected settings are saved in this browser only.':'Not connected. The page works on sample data and pasted rows.'))+'</p><p class="note-small">Works in the standalone file. The copy published on claude.ai blocks calls to outside addresses.</p></form></section>':'')+
+      (can.approve()?'<section><h3>n8n connection</h3><p class="note-small">The n8n address and access key are stored securely on the server. The browser never sees them.</p><div class="row"><button class="btn small" type="button" data-action="n8n-check">Test connection</button></div></section>':'')+
       (can.approve()?'<section><h3>Admin actions</h3><div class="row"><button class="btn small" type="button" data-action="req-done" '+(S.reqDone?'disabled':'')+'>'+(S.reqDone?'Requirements marked done':'Mark requirements done (50%)')+'</button><button class="btn small crit" type="button" data-action="reset">Reset all sample data</button></div></section>':'')+
       '</aside>';
   }
@@ -600,7 +601,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
         var col=k.state==='ok'?'var(--ok, #1a7f37)':(k.state==='busy'?'var(--muted)':'var(--danger, #b42318)');
         return '<div class="decision" role="status" aria-live="polite" style="margin-top:10px;border-left:4px solid '+col+'"><h4>'+esc(k.title)+'</h4>'+(k.detail?'<p class="note-small">'+esc(k.detail)+'</p>':'')+
           (k.state!=='busy'?'<div class="row" style="margin-top:8px"><button class="btn small primary" type="button" data-action="n8n-check">'+(k.state==='ok'?'Test again':'Retry')+'</button><button class="btn small" type="button" data-action="n8n-check-close">Close</button></div>':'')+'</div>'; })():'')+
-      (nconnected()&&ui.nNeedKey?'<form data-form="n8nkey" class="decision row" style="margin-top:10px;gap:8px;align-items:flex-end"><div class="field" style="flex:1;min-width:220px"><label for="nk-quick">n8n access key</label><input id="nk-quick" data-draft="nKeyQuick" autocomplete="off" value="'+esc(ui.drafts.nKeyQuick||'')+'"></div><button class="btn primary small" type="submit">Load items</button></form>':'')+
+
       (ui.importOpen&&can.approve()?'<div class="decision" style="margin-top:12px"><label for="imp">Paste rows exported from the n8n "Action Items" data table (JSON array)</label><textarea id="imp" data-draft="import" placeholder=\'[{"item_key":"...","title":"...","status":"pending", ...}]\'>'+esc(ui.drafts.import||'')+'</textarea><div class="row" style="margin-top:8px"><button class="btn primary small" type="button" data-action="import-go">Add to queue</button></div></div>':'')+
       run+
       '<div class="tabs" role="tablist">'+[['pending','Needs attention ('+pending().length+')'],['delayed','Delayed ('+c.delayed+')'],['decided','Decided ('+c.decided+')']].map(function(t){return '<button role="tab" type="button" data-action="tab" data-v="'+t[0]+'" aria-selected="'+(ui.tab===t[0])+'">'+t[1]+'</button>'}).join('')+'</div>'+
@@ -954,9 +955,8 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
       var txt=body+(cl?'\nClients: '+cl:'')+(loom?'\nLoom video: '+loom:'')+(fl.length?'\nAttachments: '+fl.join(', '):'');
       D.fcBody='';D.fcClients='';D.fcLoom='';D.fcFiles=[]; ui.cardOpen=false; save(); renderModal(); renderArtifacts();
       await runAgent({source:'Feedback Card',title:body.slice(0,60),date:'2026-10-16',by:personaName(),text:txt,clients:cl,type:'feedback',cardId:cid}); scrollToMonitor();
-    } else if(kind==='n8nkey'){
-      var qk=(D.nKeyQuick||'').trim(); if(!qk) return;
-      var qc=ncfg(); nsave({base:qc.base||NDEFAULT,key:qk}); D.nKeyQuick=''; ui.nNeedKey=false; ui.nstatus='Loading items from n8n...'; renderMonitor(); await nSync();
+    } else if(kind==='n8nkey'){ return;
+      
     } else if(kind==='n8n'){
       if(!can.approve()) return;
       var nb=(D.nBase!==undefined?D.nBase:ncfg().base||'').trim().replace(/\/+$/,''), nk=(D.nKey!==undefined?D.nKey:ncfg().key||'').trim();
