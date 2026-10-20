@@ -370,16 +370,18 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
   function save(){ try{ localStorage.setItem(KEY,JSON.stringify(G)); }catch(e){} }
   /* ---------- n8n connection (webhooks) ---------- */
   var NKEY='launchpad-n8n-cfg';
-  var NDEFAULT='https://jlm.app.n8n.cloud/webhook';
-  function ncfg(){ var c={}; try{ c=JSON.parse(localStorage.getItem(NKEY)||'{}')||{}; }catch(e){} if(!c.base&&c.itemsUrl) c.base=String(c.itemsUrl).replace(/\/launchpad-items.*$/,''); if(c.base===undefined) c.base=NDEFAULT; return c; }
-  function nsave(c){ try{ localStorage.setItem(NKEY,JSON.stringify(c)); }catch(e){} }
+    /* n8n address and key live on the server; the page talks to the same-origin proxy only. */
+  try{ localStorage.removeItem(NKEY); }catch(e){}
+  function ncfg(){ return {base:'/api/n8n',key:''}; }
+  function nsave(c){}
   function nconnected(){ return !!ncfg().base; }
   function nep(name){ return String(ncfg().base||'').replace(/\/+$/,'')+'/launchpad-'+name; }
   function nok(u){ return /^(https:\/\/|http:\/\/(localhost|127\.0\.0\.1)(:|\/|$))/.test(u); }
   function nurl(base,params){ var u=base+(base.indexOf('?')>-1?'&':'?'); return u+Object.keys(params).filter(function(k){return params[k]}).map(function(k){return encodeURIComponent(k)+'='+encodeURIComponent(params[k])}).join('&'); }
   function nerr(e){
     if(e&&e.name==='AbortError') return 'n8n did not answer in 12 seconds.';
-    if(e&&e.status===401) return 'n8n rejected the access key.';
+    if(e&&e.status===401) return 'n8n rejected the access key stored on the server.';
+    if(e&&e.status===503) return 'n8n is not set up on the server yet.';
     if(e&&e.status) return 'n8n answered with an error ('+e.status+').';
     return 'Could not reach n8n. Check the URL, that the workflow is active, and that you opened the standalone file. The page published on claude.ai blocks calls to outside addresses.';
   }
@@ -392,22 +394,21 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
   }
   async function nSync(){
     var c=ncfg(); if(!nconnected()) return;
-    if(!c.key){ ui.nNeedKey=true; ui.nstatus='Enter your n8n access key to load the pending items.'; console.warn('[n8n] no access key saved in this browser; skipping fetch'); renderMonitor(); return; }
     ui.nbusy=true; renderMonitor();
     try{ var j=await nfetch(nurl(nep('items'),{project_key:S.project.jira||'SCRUM',key:c.key}));
       var rows=Array.isArray(j)?j:(j.items||j.data||j.rows||[]); console.log('[n8n] rendering',rows.length,'item(s)'); ui.nNeedKey=false; ui.tab='pending'; ui.filter='all'; importRows(rows,'n8n sync',true); await nState(true); ui.nstatus='Synced '+new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})+'. '+rows.length+' pending row'+(rows.length===1?'':'s')+' in n8n.';
-    }catch(e){ if(e&&e.status===401) ui.nNeedKey=true; ui.nstatus=nerr(e); toast(nerr(e)); }
+    }catch(e){ ui.nstatus=nerr(e); toast(nerr(e)); }
     ui.nbusy=false; renderMonitor(); if(ui.drawerOpen) renderDrawer();
   }
   async function nCheck(){
     var c=ncfg();
-    if(!c.key){ ui.nNeedKey=true; ui.ncheck={state:'fail',title:'No access key saved',detail:'Enter your n8n access key in the box above, then retry.'}; renderMonitor(); return; }
     ui.ncheck={state:'busy',title:'Testing the connection...',detail:'Checking your key and the approvals address.'}; renderMonitor();
     var t0=Date.now();
     try{ var j=await nfetch(nurl(nep('items'),{project_key:S.project.jira||'SCRUM',key:c.key})); var rows=Array.isArray(j)?j:(j.items||j.data||j.rows||[]);
       ui.nNeedKey=false; ui.ncheck={state:'ok',title:'Connection works',detail:'Your key was accepted and the approvals list answered in '+((Date.now()-t0)/1000).toFixed(1)+'s with '+rows.length+' pending item'+(rows.length===1?'':'s')+'.'};
     }catch(e){
-      if(e&&e.status===401){ ui.nNeedKey=true; ui.ncheck={state:'fail',title:'Access key rejected',detail:'n8n is reachable, but it did not accept the saved key. Enter the correct key above, then retry.'}; }
+      if(e&&e.status===401){ ui.ncheck={state:'fail',title:'Access key rejected',detail:'n8n is reachable, but it did not accept the access key stored on the server. Update N8N_ACCESS_KEY in the project settings, then retry.'}; }
+      else if(e&&e.status===503){ ui.ncheck={state:'fail',title:'n8n is not set up on the server',detail:'The n8n address or access key is missing from the project settings.'}; }
       else if(e&&e.status){ ui.ncheck={state:'fail',title:'n8n answered with an error ('+e.status+')',detail:e.status===404?'The approvals address was not found. Check that the workflow is active in n8n.':'Check that the workflow is active in n8n, then retry.'}; }
       else ui.ncheck={state:'fail',title:'Could not reach n8n',detail:nerr(e)};
     }
