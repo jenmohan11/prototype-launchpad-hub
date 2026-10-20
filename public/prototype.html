@@ -370,7 +370,8 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
   function save(){ try{ localStorage.setItem(KEY,JSON.stringify(G)); }catch(e){} }
   /* ---------- n8n connection (webhooks) ---------- */
   var NKEY='launchpad-n8n-cfg';
-  function ncfg(){ var c={}; try{ c=JSON.parse(localStorage.getItem(NKEY)||'{}')||{}; }catch(e){} if(!c.base&&c.itemsUrl) c.base=String(c.itemsUrl).replace(/\/launchpad-items.*$/,''); return c; }
+  var NDEFAULT='https://jlm.app.n8n.cloud/webhook';
+  function ncfg(){ var c={}; try{ c=JSON.parse(localStorage.getItem(NKEY)||'{}')||{}; }catch(e){} if(!c.base&&c.itemsUrl) c.base=String(c.itemsUrl).replace(/\/launchpad-items.*$/,''); if(c.base===undefined) c.base=NDEFAULT; return c; }
   function nsave(c){ try{ localStorage.setItem(NKEY,JSON.stringify(c)); }catch(e){} }
   function nconnected(){ return !!ncfg().base; }
   function nep(name){ return String(ncfg().base||'').replace(/\/+$/,'')+'/launchpad-'+name; }
@@ -391,10 +392,11 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
   }
   async function nSync(){
     var c=ncfg(); if(!nconnected()) return;
+    if(!c.key){ ui.nNeedKey=true; ui.nstatus='Enter your n8n access key to load the pending items.'; console.warn('[n8n] no access key saved in this browser; skipping fetch'); renderMonitor(); return; }
     ui.nbusy=true; renderMonitor();
     try{ var j=await nfetch(nurl(nep('items'),{project_key:S.project.jira||'SCRUM',key:c.key}));
-      var rows=Array.isArray(j)?j:(j.items||j.data||j.rows||[]); importRows(rows,'n8n sync',true); await nState(true); ui.nstatus='Synced '+new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})+'. '+rows.length+' pending row'+(rows.length===1?'':'s')+' in n8n.';
-    }catch(e){ ui.nstatus=nerr(e); toast(nerr(e)); }
+      var rows=Array.isArray(j)?j:(j.items||j.data||j.rows||[]); console.log('[n8n] rendering',rows.length,'item(s)'); ui.nNeedKey=false; ui.tab='pending'; ui.filter='all'; importRows(rows,'n8n sync',true); await nState(true); ui.nstatus='Synced '+new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})+'. '+rows.length+' pending row'+(rows.length===1?'':'s')+' in n8n.';
+    }catch(e){ if(e&&e.status===401) ui.nNeedKey=true; ui.nstatus=nerr(e); toast(nerr(e)); }
     ui.nbusy=false; renderMonitor(); if(ui.drawerOpen) renderDrawer();
   }
   async function nState(silent){
