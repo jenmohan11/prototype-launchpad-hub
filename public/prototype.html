@@ -507,7 +507,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
     if(c.milestone) parts.push(plural(c.milestone,'milestone')+' to confirm');
     var s1=S.progress>=100? S.project.name+' has reached handoff.' : S.project.name+' is currently in '+(S.progress<50&&!S.reqDone&&(S.reqDraft||S.progress>=35)?'planning, and the requirements draft is live and in review':S.progress<35?'planning and requirements gathering is in progress':(S.progress<50?'planning, and the requirements draft is live and in review':(S.progress<75?'build, and requirements are complete':'evaluation, moving toward handoff')))+'.';
     var s2=parts.length? 'You have '+parts.join(', ').replace(/, ([^,]*)$/,(parts.length>2?', and ':' and ')+'$1')+' to review.' : 'Nothing is waiting for your decision.';
-    var s3=top? 'Next step: decide on "'+top.title+'"'+(c.delayed?' ('+c.delayed+' delayed).':'.') : (c.delayed? plural(c.delayed,'item')+' delayed; revisit when ready.':'Add meeting notes or feedback to start the next round.');
+    var s3=top? 'Highest priority action needed: decide on "'+top.title+'"'+(c.delayed?' ('+c.delayed+' delayed).':'.') : (c.delayed? plural(c.delayed,'item')+' delayed; revisit when ready.':'Add meeting notes or feedback to start the next round.');
     var rs=S.remote&&S.remote.sections&&S.remote.sections.summary&&S.remote.sections.summary.content; if(rs) s1=String(rs).trim();
     var da=(S.designAdds||[]); if(da.length) s2+=' New design files added: '+da.slice(0,4).map(function(d){return d.what+' ('+fmtDay(d.at)+')'}).join(', ')+'.';
     else { var L=S.links||{}, have=[]; if(L.prototype) have.push('the Claude prototype'); if(L.miro) have.push('the Miro design board'); s2+= have.length? ' Prototype and design: '+have.join(' and ')+' '+(have.length>1?'are':'is')+' available for review.' : ' Prototype and design: no prototype or Miro board has been added yet.'; }
@@ -610,7 +610,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
     $('#sec-monitor').innerHTML=
       '<div class="monitor-head"><div><span class="eyebrow">Status monitor</span><h2>What needs your attention</h2></div>'+
       '<div class="row"><button class="btn small" type="button" data-action="open-card">Add feedback card</button>'+(can.approve()&&nconnected()?'<button class="btn small primary" type="button" data-action="n8n-sync" '+(ui.nbusy?'disabled':'')+'>'+(ui.nbusy?'Syncing...':'Sync from n8n')+'</button>':'')+(can.approve()?'<button class="btn small" type="button" data-action="import-toggle">'+(nconnected()?'Paste rows instead':'Import from n8n')+'</button>':'')+'</div></div>'+
-      '<p class="summary">'+sum.map(esc).join(' ')+'</p>'+
+      sum.map(function(s){return '<p class="summary">'+esc(s)+'</p>'}).join('')+
       (S.remote&&S.remote.sections&&S.remote.sections.summary?'<p class="note-small mono">First sentence(s) written by the Updater Agent in n8n after your last accepted decision.</p>':'')+
       (function(){ var ns=S.remote&&S.remote.sections&&S.remote.sections.next_steps; if(!ns||!ns.content) return ''; var ls=String(ns.content).split('\n').map(function(x){return x.replace(/^\s*[-*]\s*/,'').trim()}).filter(Boolean); return '<div class="decision" style="margin:10px 0"><h4 class="eyebrow">Next steps (written by the agents)</h4><ul>'+ls.map(function(x){return '<li>'+esc(x)+'</li>'}).join('')+'</ul></div>'; })()+
       (ui.stateMsg?'<p class="note-small mono" role="status">'+esc(ui.stateMsg)+'</p>':'')+
