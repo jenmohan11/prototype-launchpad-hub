@@ -1,5 +1,6 @@
 - Server-side n8n proxy (no key in browser) — done
 - Keep Kickoff sync and all meeting notes inside a compact central repository — done; verified search, opening a note and reload
-- Import recent meeting sources into the repository and retain each specific Google Doc link — in progress
+- Import recent meeting sources into the repository and retain each specific Google Doc link — done; verified October 21 source, six excerpts, link, search and reload
+- Older notes without a Google Doc link — waiting on the original document links; each entry now supports adding its link
 - Attention list rank, comment labels, design files in summary, feedback-card form removed, control panel to Settings — done
 - Sprint name/dates from Jira agent — page ready; waiting on n8n workflow to send sprint fields
