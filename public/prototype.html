@@ -387,6 +387,15 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
     catch(e){ console.warn('[n8n] fetch failed',shown,e); throw e; }
     finally{ clearTimeout(t); }
   }
+  async function sendFeedbackCard(card,event){
+    var payload={event:event,card_id:card.id,project_key:S.project.jira||'SCRUM',title:(card.body||'').split('\n')[0].slice(0,80),
+      submitter_name:card.by||personaName(),submitter_email:card.email||G.email||'',audience:card.audience||'internal',
+      feedback:card.body||'',card_link:card.loom||'',submitted_at:new Date().toISOString()};
+    try{ var j=await nfetch('/api/n8n/feedback-card',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
+      if(j&&j.received) toast('Feedback card sent to n8n. Refreshing the list in 20 seconds.');
+      setTimeout(function(){ nSync(); },20000);
+    }catch(e){ toast('Card saved, but sending it to n8n failed: '+nerr(e)); }
+  }
   async function nSync(){
     var c=ncfg(); if(!nconnected()) return;
     ui.nbusy=true; renderMonitor();
@@ -941,7 +950,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
         var etxt=ec2.body+(ec2.clients?'\nClients: '+ec2.clients:'')+(loom?'\nLoom video: '+loom:'')+(ec2.files.length?'\nAttachments: '+ec2.files.join(', '):'');
         var hasPending=S.items.some(function(x){return x.cardId===ec2.id&&x.status==='pending'});
         var eid=ec2.id, ebody=ec2.body, ecl=ec2.clients;
-        closeCard(); save(); renderArtifacts();
+        closeCard(); save(); renderArtifacts(); sendFeedbackCard(ec2,'updated');
         if(hasPending){ await runAgent({source:'Feedback Card',title:ebody.slice(0,60),date:'2026-10-16',by:personaName(),text:etxt,clients:ecl,type:'feedback',cardId:eid}); scrollToMonitor(); }
         else { toast('Card updated.'); }
         return;
@@ -949,7 +958,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
       var aud=D.fcAud||'internal', cid='c'+Date.now(), body=D.fcBody.trim(), cl=(D.fcClients||'').trim(), fl=D.fcFiles||[];
       S.cards.unshift({id:cid,owner:G.persona,audience:aud,by:personaName(),date:'2026-10-16',clients:cl,body:body,loom:loom,files:fl}); ui.fbTab=aud; ui.open.feedback=true;
       var txt=body+(cl?'\nClients: '+cl:'')+(loom?'\nLoom video: '+loom:'')+(fl.length?'\nAttachments: '+fl.join(', '):'');
-      D.fcBody='';D.fcClients='';D.fcLoom='';D.fcFiles=[]; ui.cardOpen=false; save(); renderModal(); renderArtifacts();
+      D.fcBody='';D.fcClients='';D.fcLoom='';D.fcFiles=[]; ui.cardOpen=false; save(); renderModal(); renderArtifacts(); sendFeedbackCard(S.cards[0],'submitted');
       await runAgent({source:'Feedback Card',title:body.slice(0,60),date:'2026-10-16',by:personaName(),text:txt,clients:cl,type:'feedback',cardId:cid}); scrollToMonitor();
     } else if(kind==='n8nkey'){ return;
       

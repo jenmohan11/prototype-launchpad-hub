@@ -7,6 +7,7 @@ const ALLOWED: Record<string, "GET" | "POST"> = {
   "launchpad-state": "GET",
   "launchpad-submit": "POST",
   "launchpad-decision": "POST",
+  "feedback-card": "POST",
 };
 
 async function forward(request: Request, name: string, method: "GET" | "POST") {
@@ -18,7 +19,14 @@ async function forward(request: Request, name: string, method: "GET" | "POST") {
   const inUrl = new URL(request.url);
   const out = new URL(`${base}/${name}`);
   let body: string | undefined;
-  if (method === "GET") {
+  const isJson = (request.headers.get("content-type") || "").includes("application/json");
+  if (method === "POST" && isJson) {
+    // JSON webhooks: body passes through unchanged; key goes in the query string.
+    const raw = await request.text();
+    if (raw.length > 50000) return Response.json({ error: "body too large" }, { status: 413 });
+    body = raw;
+    out.searchParams.set("key", key);
+  } else if (method === "GET") {
     const pk = inUrl.searchParams.get("project_key");
     if (pk) out.searchParams.set("project_key", pk.slice(0, 64));
     out.searchParams.set("key", key);
@@ -31,7 +39,7 @@ async function forward(request: Request, name: string, method: "GET" | "POST") {
     const r = await fetch(out.toString(), {
       method,
       body: body ?? null,
-      headers: method === "POST" ? { "content-type": "application/x-www-form-urlencoded" } : {},
+      headers: method === "POST" ? { "content-type": isJson ? "application/json" : "application/x-www-form-urlencoded" } : {},
       signal: AbortSignal.timeout(12000),
     });
     const text = await r.text();
