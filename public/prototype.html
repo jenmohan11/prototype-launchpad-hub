@@ -709,7 +709,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
       artBox('sov','Statement of Value','why, goals, key clients',sov)+
       artBox('req','Requirements','connected to Confluence · '+S.requirements.length,reqs)+
       artBox('feedback','Stakeholder Feedback','internal and clients · '+S.cards.length,fb)+
-      artBox('meetings','Meeting Notes and Videos','searchable repository · '+S.notes.length+' notes',notes)+
+      artBox('meetings','Meeting Notes and Videos','searchable repository · '+plural(S.notes.length,'note'),notes)+
       artBox('prototype','Prototype and Design','Claude and Miro',proto)+
       artBox('log','Change Log','every decision · '+allLog.length,log);
     applyMnFilter();
