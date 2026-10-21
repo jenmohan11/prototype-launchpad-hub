@@ -361,7 +361,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
   var ORDER=['rm','ar','ac','be'];
 
   var G, S, ui={editingCard:null,tab:'pending',filter:'all',expanded:null,drawerOpen:false,menuOpen:false,open:{meetings:true},fbTab:'internal',drafts:{},fresh:{},run:null,importOpen:false,toast:''};
-  function load(){ try{ var r=localStorage.getItem(KEY); if(r){ var p=JSON.parse(r); if(p&&p.projects&&p.projects[p.current]) return p; } }catch(e){} return seed(); }
+  function load(){ try{ var r=localStorage.getItem(KEY); if(r){ var p=JSON.parse(r); if(p&&p.projects&&p.projects[p.current]){ Object.keys(p.projects).forEach(function(k){ var pr=p.projects[k]; if(pr&&pr.items) pr.items=pr.items.filter(function(i){return i.key!=='scrum-jira-comment-90-day-timeouts-20261014';}); }); return p; } } }catch(e){} return seed(); }
   function save(){ try{ localStorage.setItem(KEY,JSON.stringify(G)); }catch(e){} }
   /* ---------- n8n connection (webhooks) ---------- */
   var NKEY='launchpad-n8n-cfg';
