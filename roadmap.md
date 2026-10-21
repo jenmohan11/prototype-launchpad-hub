@@ -1,1 +1,3 @@
 - Server-side n8n proxy (no key in browser) — done
+- Attention list rank, comment labels, design files in summary, feedback-card form removed, control panel to Settings — done
+- Sprint name/dates from Jira agent — page ready; waiting on n8n workflow to send sprint fields

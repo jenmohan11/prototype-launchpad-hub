@@ -226,7 +226,19 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
   function plural(n,one,many){ return n+' '+(n===1?one:(many||one+'s')); }
 
   var TYPE_LABEL={blocker:'Blocker',requirement_change:'Requirement change',feedback:'Feedback card',comment:'Comment',milestone:'Milestone'};
-  var TYPE_ORDER={blocker:0,milestone:0.5,requirement_change:1,feedback:2,comment:3};
+  var TYPE_ORDER={blocker:0,requirement_change:1,feedback:2,comment:3,milestone:4};
+  function typeLabel(it){ if(it.type!=='comment') return TYPE_LABEL[it.type]||it.type; var src=String(it.source||'').replace(/\s*feedback\b/i,'').trim(); if(!src) return 'Comment'; return /comment/i.test(src)?src.replace(/comment/i,'comment'):src+' comment'; }
+  function fmtSprintDay(d,yr){ var t=new Date(d); if(isNaN(t)) return String(d); return t.toLocaleDateString('en-US',{month:'short',day:'numeric',timeZone:'UTC'})+(yr?', '+t.getUTCFullYear():''); }
+  function applySprint(j){
+    if(!j||typeof j!=='object') return false; var it0=(j.items&&j.items[0])||{};
+    var sp=j.sprint||(j.project&&j.project.sprint)||null, o={};
+    if(sp&&typeof sp==='object') o={name:sp.name||sp.sprint_name,start:sp.start||sp.startDate||sp.start_date,end:sp.end||sp.endDate||sp.end_date};
+    else if(typeof sp==='string') o={label:sp};
+    var src=j.sprint_name?j:(it0.sprint_name?it0:null);
+    if(src) o={name:src.sprint_name,start:src.sprint_start||src.sprint_start_date,end:src.sprint_end||src.sprint_end_date};
+    var label=o.label||(o.name?(o.name+(o.start&&o.end?' · '+fmtSprintDay(o.start)+' to '+fmtSprintDay(o.end,true):'')):'');
+    if(!label||label===S.project.sprint) return false; S.project.sprint=label; save(); renderProject(); console.log('[n8n] sprint updated from Jira agent:',label); return true;
+  }
   var PRIO_ORDER={high:0,medium:1,low:2};
   var SECTIONS=['Summary','Next Steps','Requirements','Statement of Value','Stakeholder Feedback','Risks & Blockers','Timeline','Jira','Slack'];
   var PERSONAS={admin:'Admin (PM)',dev:'Dev',business:'Business'};
@@ -400,7 +412,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
     var c=ncfg(); if(!nconnected()) return;
     ui.nbusy=true; renderMonitor();
     try{ var j=await nfetch(nurl(nep('items'),{project_key:S.project.jira||'SCRUM',key:c.key}));
-      var rows=Array.isArray(j)?j:(j.items||j.data||j.rows||[]); console.log('[n8n] rendering',rows.length,'item(s)'); ui.nNeedKey=false; ui.tab='pending'; ui.filter='all'; importRows(rows,'n8n sync',true); await nState(true); ui.nstatus='Synced '+new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})+'. '+rows.length+' pending row'+(rows.length===1?'':'s')+' in n8n.';
+      applySprint(j); var rows=Array.isArray(j)?j:(j.items||j.data||j.rows||[]); console.log('[n8n] rendering',rows.length,'item(s)'); ui.nNeedKey=false; ui.tab='pending'; ui.filter='all'; importRows(rows,'n8n sync',true); await nState(true); ui.nstatus='Synced '+new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})+'. '+rows.length+' pending row'+(rows.length===1?'':'s')+' in n8n.';
     }catch(e){ ui.nstatus=nerr(e); toast(nerr(e)); }
     ui.nbusy=false; renderMonitor(); if(ui.drawerOpen) renderDrawer();
   }
@@ -421,7 +433,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
   async function nState(silent){
     if(!nconnected()) return false; var c=ncfg();
     try{ var j=await nfetch(nurl(nep('state'),{project_key:S.project.jira||'SCRUM',key:c.key}));
-      var m={}; (j.sections||[]).forEach(function(x){ if(x&&x.section) m[String(x.section).toLowerCase().replace(/\s+/g,'_')]=x; });
+      applySprint(j); var m={}; (j.sections||[]).forEach(function(x){ if(x&&x.section) m[String(x.section).toLowerCase().replace(/\s+/g,'_')]=x; });
       var prev=JSON.stringify(S.remote||{}); S.remote={sections:m,changelog:(j.changelog||[]).slice(0,30),fetched:new Date().toISOString()};
       save(); renderAll(); return JSON.stringify(S.remote.sections)+JSON.stringify(S.remote.changelog)!==prev;
     }catch(e){ if(!silent){ ui.nstatus=nerr(e); toast(nerr(e)); } return false; }
@@ -489,14 +501,15 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
   function summaryText(){
     var c=counts(), top=sortItems(pending())[0], parts=[];
     if(c.blocker) parts.push(plural(c.blocker,'blocker'));
-    if(c.milestone) parts.push(plural(c.milestone,'milestone')+' to confirm');
     if(c.requirement_change) parts.push(plural(c.requirement_change,'requirement change'));
     if(c.feedback) parts.push(plural(c.feedback,'feedback card'));
     if(c.comment) parts.push(plural(c.comment,'comment'));
+    if(c.milestone) parts.push(plural(c.milestone,'milestone')+' to confirm');
     var s1=S.progress>=100? S.project.name+' has reached handoff.' : S.project.name+' is currently in '+(S.progress<50&&!S.reqDone&&(S.reqDraft||S.progress>=35)?'planning, and the requirements draft is live and in review':S.progress<35?'planning and requirements gathering is in progress':(S.progress<50?'planning, and the requirements draft is live and in review':(S.progress<75?'build, and requirements are complete':'evaluation, moving toward handoff')))+'.';
     var s2=parts.length? 'You have '+parts.join(', ').replace(/, ([^,]*)$/,(parts.length>2?', and ':' and ')+'$1')+' to review.' : 'Nothing is waiting for your decision.';
     var s3=top? 'Next step: decide on "'+top.title+'"'+(c.delayed?' ('+c.delayed+' delayed).':'.') : (c.delayed? plural(c.delayed,'item')+' delayed; revisit when ready.':'Add meeting notes or feedback to start the next round.');
     var rs=S.remote&&S.remote.sections&&S.remote.sections.summary&&S.remote.sections.summary.content; if(rs) s1=String(rs).trim();
+    var da=(S.designAdds||[]); if(da.length) s2+=' New design files added: '+da.slice(0,4).map(function(d){return d.what+' ('+fmtDay(d.at)+')'}).join(', ')+'.';
     return [s1,s2,s3];
   }
 
@@ -550,6 +563,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
       '<section><h3>Stakeholders ('+S.stakeholders.length+') on '+esc(S.project.name)+'</h3><ul class="plain">'+S.stakeholders.map(function(s){return '<li><span>'+esc(s.name)+'</span><span class="pill plain">'+PERSONAS[s.role]+'</span></li>'}).join('')+'</ul>'+inviteForm+'</section>'+
       '<section><h3>What each persona can do</h3><div class="tablewrap"><table><thead><tr><th>Capability</th><th>Admin</th><th>Dev</th><th>Business</th></tr></thead><tbody>'+
       rows.map(function(r){return '<tr><td>'+r[0]+'</td>'+yn(r[1])+yn(r[2])+yn(r[3])+'</tr>'}).join('')+'</tbody></table></div></section>'+
+      (can.control()?'<section><h3>Prototype control panel</h3><p style="margin:6px 0">Version v0.3 · '+(S.protoLocked?'Locked for review':'Open for edits')+'</p><button class="btn small" type="button" data-action="lock">'+(S.protoLocked?'Unlock prototype':'Lock for review')+'</button></section>':'')+
       (can.approve()?'<section><h3>n8n connection</h3><p class="note-small">The n8n address and access key are stored securely on the server. The browser never sees them.</p><div class="row"><button class="btn small" type="button" data-action="n8n-check">Test connection</button></div></section>':'')+
       (can.approve()?'<section><h3>Admin actions</h3><div class="row"><button class="btn small" type="button" data-action="req-done" '+(S.reqDone?'disabled':'')+'>'+(S.reqDone?'Requirements marked done':'Mark requirements done (50%)')+'</button><button class="btn small crit" type="button" data-action="reset">Reset all sample data</button></div></section>':'')+
       '</aside>';
@@ -557,7 +571,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
   function itemRow(it){
     var open=ui.expanded===it.key;
     var head='<button class="item-top" type="button" data-action="toggle-item" data-key="'+esc(it.key)+'" aria-expanded="'+open+'">'+
-      '<span class="pill '+it.type+'">'+TYPE_LABEL[it.type]+'</span>'+
+      '<span class="pill '+it.type+'">'+esc(typeLabel(it))+'</span>'+
       '<span><span class="item-title">'+esc(it.title)+'</span><br><span class="item-sub">'+esc(it.source)+' · '+esc(it.by)+' · '+fmtDay(it.date)+(it.clients?' · '+esc(it.clients):'')+'</span><br><span class="item-sub">'+esc(it.reason||'')+'</span></span>'+
       '<span class="row" style="justify-content:flex-end">'+(ui.fresh[it.key]?'<span class="pill fresh">New</span>':'')+'<span class="pill plain">'+esc(it.priority)+'</span></span></button>';
     if(!open) return '<div class="item">'+head+'</div>';
@@ -587,9 +601,9 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
   function renderMonitor(){
     var c=counts(), sum=summaryText();
     var list;
-    if(ui.tab==='pending') list=sortItems(pending()); else if(ui.tab==='delayed') list=sortItems(S.items.filter(function(i){return i.status==='delayed'})); else list=S.items.filter(function(i){return i.status==='accepted'||i.status==='rejected'}).sort(function(a,b){return (b.decided_at||'')>(a.decided_at||'')?1:-1});
+    if(ui.tab==='pending') list=sortItems(pending()).concat(ui.filter==='all'?sortItems(S.items.filter(function(i){return i.status==='delayed'})):[]); else if(ui.tab==='delayed') list=sortItems(S.items.filter(function(i){return i.status==='delayed'})); else list=S.items.filter(function(i){return i.status==='accepted'||i.status==='rejected'}).sort(function(a,b){return (b.decided_at||'')>(a.decided_at||'')?1:-1});
     if(ui.tab==='pending' && ui.filter!=='all') list=list.filter(function(i){return i.type===ui.filter});
-    var flt=[['all','All ('+pending().length+')'],['blocker','Blockers ('+c.blocker+')'],['requirement_change','Requirement changes ('+c.requirement_change+')'],['milestone','Milestones ('+c.milestone+')'],['feedback','Feedback cards ('+c.feedback+')'],['comment','Comments ('+c.comment+')']];
+    var flt=[['all','All ('+pending().length+')'],['blocker','Blockers ('+c.blocker+')'],['requirement_change','Requirement changes ('+c.requirement_change+')'],['feedback','Feedback cards ('+c.feedback+')'],['comment','Comments ('+c.comment+')'],['milestone','Milestones ('+c.milestone+')']];
     var run='';
     if(ui.run){ run='<div class="run" aria-live="polite"><ul class="plain">'+ui.run.lines.map(function(l){return '<li class="'+(l.sim?'sim':'')+'">'+(l.sim?'[simulated] ':'')+esc(l.t)+'</li>'}).join('')+'</ul>'+(ui.run.mode?'<div class="mode">Extraction: '+esc(ui.run.mode)+'</div>':'')+'</div>'; }
     $('#sec-monitor').innerHTML=
@@ -669,8 +683,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
     var cards=S.cards.filter(function(c){return c.audience===ui.fbTab});
     var fb=
       '<div class="tabs" role="tablist" style="margin-top:0">'+[['internal','Internal'],['client','Clients']].map(function(t){return '<button role="tab" type="button" data-action="fbtab" data-v="'+t[0]+'" aria-selected="'+(ui.fbTab===t[0])+'">'+t[1]+'</button>'}).join('')+'</div>'+
-      '<div>'+(cards.length?cards.map(function(c){return cardHtml(c,true)}).join(''):'<p class="muted">No cards in this tab yet.</p>')+'</div>'+
-      '<div class="decision"><h3>Add a feedback card</h3><p class="note-small" style="margin:4px 0 10px">Share a use case, the clients who need it, or a missing requirement. The PM reviews every card.</p><button class="btn primary" type="button" data-action="open-card">Add feedback card</button></div>';
+      '<div>'+(cards.length?cards.map(function(c){return cardHtml(c,true)}).join(''):'<p class="muted">No cards in this tab yet.</p>')+'</div>';
     var notes=
       '<div>'+S.notes.map(function(n){return '<div class="log" id="note-'+esc(n.id)+'"><div class="row" style="justify-content:space-between"><b>'+esc(n.title)+'</b><span class="note-small mono">'+fmtDay(n.date)+' · '+esc(n.status)+'</span></div><details><summary>Transcript</summary><blockquote style="white-space:pre-wrap">'+esc(n.text)+'</blockquote></details></div>'}).join('')+'</div>'+
       '<form data-form="notes" class="stack" style="gap:10px"><h3>Add meeting notes</h3><p class="note-small">Google Meet notes land in the Drive folder; here you can paste them directly. Standup notes work the same way.</p>'+
@@ -680,7 +693,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
     var proto=
       '<p>Prototype and design files live in Claude and Miro.</p><div class="row">'+linkChip('prototype',(S.links||{}).prototype)+linkChip('Miro board',(S.links||{}).miro)+'</div>'+
       (can.control()?'<form data-form="links" class="stack" style="gap:10px"><h3>Add or change links</h3><div class="grid2"><div class="field"><label for="lk-proto">Claude prototype link</label><input id="lk-proto" type="url" data-draft="lkProto" value="'+esc(ui.drafts.lkProto!==undefined?ui.drafts.lkProto:((S.links||{}).prototype||''))+'" placeholder="https://claude.ai/artifact/..."></div><div class="field"><label for="lk-miro">Miro board link</label><input id="lk-miro" type="url" data-draft="lkMiro" value="'+esc(ui.drafts.lkMiro!==undefined?ui.drafts.lkMiro:((S.links||{}).miro||''))+'" placeholder="https://miro.com/app/board/..."></div></div><div class="row"><button class="btn primary" type="submit">Save links</button><span class="note-small">Must start with https://. Leave a box empty to remove that link. Only the Admin can change these.</span></div></form>':'')+
-      (can.control()?'<div class="decision"><h4 class="eyebrow">Control panel (Admin only)</h4><p style="margin:6px 0">Version v0.3 · '+(S.protoLocked?'Locked for review':'Open for edits')+'</p><button class="btn small" type="button" data-action="lock">'+(S.protoLocked?'Unlock prototype':'Lock for review')+'</button></div>':'<div class="decision"><p class="muted">Only the Admin can change the prototype links and controls. You can open the links, use the prototype and send feedback.</p></div>')+
+      (can.control()?'':'<div class="decision"><p class="muted">Only the Admin can change the prototype links and controls. You can open the links, use the prototype and send feedback.</p></div>')+
       '<div>'+S.protoComments.map(function(c){return cardHtml(c,false)}).join('')+'</div>'+
       '<form data-form="proto" class="stack" style="gap:10px"><h3>Prototype feedback</h3><div class="field"><label for="pf-body">Comment</label><textarea id="pf-body" required data-draft="pfBody" placeholder="What did you try, and what should change?">'+esc(ui.drafts.pfBody||'')+'</textarea></div><div class="row"><button class="btn primary" type="submit" '+(busy?'disabled':'')+'>Send feedback</button><span class="note-small">If the PM accepts it, they implement it.</span></div></form>';
     var allLog=S.log.concat(((S.remote&&S.remote.changelog)||[]).map(function(r){ return {kind:'applied',title:r.title||r.item_key,note:r.note||'',effects:String(r.effects||'').split('\n').filter(Boolean),at:r.at||''}; })).sort(function(a,b){return String(b.at)>String(a.at)?1:-1});
@@ -905,7 +918,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
     else if(act==='sample-note'){ ui.drafts.mnTitle=SAMPLE_NOTE.title; ui.drafts.mnDate=SAMPLE_NOTE.date; ui.drafts.mnText=SAMPLE_NOTE.text; renderArtifacts(); }
     else if(act==='sim-confluence'){ if(ui.run&&ui.run.active) return; var cd={id:'d'+Date.now(),title:'Reporting Manager requirements (Confluence page)',url:'',by:'Confluence Agent',date:'2026-10-19'}; S.reqDocs=S.reqDocs||[]; S.reqDocs.unshift(cd); ui.open.req=true; save(); renderArtifacts(); proposeReqMilestone(cd,true).then(scrollToMonitor); }
     else if(act==='goto-links'){ ui.open.prototype=true; renderArtifacts(); var t2=$('#art-prototype'); if(t2) t2.scrollIntoView({block:'center'}); }
-    else if(act==='lock'&&can.control()){ S.protoLocked=!S.protoLocked; logEntry({kind:'lock',title:S.protoLocked?'Prototype locked for review':'Prototype unlocked',note:'',effects:[]}); save(); renderArtifacts(); }
+    else if(act==='lock'&&can.control()){ S.protoLocked=!S.protoLocked; logEntry({kind:'lock',title:S.protoLocked?'Prototype locked for review':'Prototype unlocked',note:'',effects:[]}); save(); renderArtifacts(); if(ui.drawerOpen) renderDrawer(); }
     else if(act==='req-done'){ if(can.approve()&&!S.reqDone){ S.reqDone=true; var bb=S.progress; S.progress=Math.max(S.progress,50); logEntry({kind:'reqdone',title:'Requirements marked done',note:'',effects:['Progress '+bb+'% to '+S.progress+'%']}); save(); renderAll(); } }
     else if(act==='reset'){ if(can.approve()){ try{ localStorage.removeItem(KEY); }catch(x){} var keep=G.persona; G=seed(); G.persona=keep; S=G.projects[G.current]; ui.fresh={}; ui.drafts={}; ui.run=null; ui.expanded=null; renderAll(); toast('All sample data restored.'); } }
     else if(act==='n8n-clear'){ nsave({}); ui.nstatus='Disconnected.'; renderAll(); }
@@ -979,7 +992,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
       if(!can.control()) return;
       var lp=(D.lkProto!==undefined?D.lkProto:((S.links||{}).prototype||'')).trim(), lm=(D.lkMiro!==undefined?D.lkMiro:((S.links||{}).miro||'')).trim();
       if((lp&&!/^https:\/\//.test(lp))||(lm&&!/^https:\/\//.test(lm))){ toast('Links must start with https://'); return; }
-      S.links={prototype:lp,miro:lm}; delete D.lkProto; delete D.lkMiro; save(); renderProject(); renderArtifacts(); toast('Links saved.');
+      var ol=S.links||{}; S.designAdds=S.designAdds||[]; var today=new Date().toISOString().slice(0,10); if(lp&&lp!==ol.prototype) S.designAdds.unshift({what:'prototype link',at:today}); if(lm&&lm!==ol.miro) S.designAdds.unshift({what:'Miro design board',at:today}); S.links={prototype:lp,miro:lm}; renderMonitor(); delete D.lkProto; delete D.lkMiro; save(); renderProject(); renderArtifacts(); toast('Links saved.');
     } else if(kind==='proto'){
       if(!D.pfBody||!D.pfBody.trim()) return;
       var pb=D.pfBody.trim(); S.protoComments.unshift({id:'p'+Date.now(),by:personaName(),date:'2026-10-16',clients:'',body:pb}); D.pfBody='';
