@@ -213,6 +213,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
 <div id="sec-modal"></div>
 <div class="toast" id="toast" role="status" hidden></div>
 
+<script src="/meeting-notes.js"></script>
 <script>
 (function(){
   var KEY='launchpad-proto-v3';
@@ -449,7 +450,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
     var c=ncfg(); ui.run={active:true,lines:[],mode:'n8n Orchestrator Agent (live)',title:inp.title};
     var push=function(t){ ui.run.lines.push({t:t,sim:false}); renderMonitor(); renderArtifacts(); };
     push('Sending "'+inp.title+'" to the Orchestrator Agent in n8n');
-    var body=new URLSearchParams({key:c.key||'',project_key:S.project.jira||'SCRUM',source:inp.source,title:inp.title,date:inp.date||'',by:inp.by||'',clients:inp.clients||'',text:inp.text||'',source_ref:inp.cardId?('launchpad-card:'+inp.cardId):'',item_type:inp.type||''});
+    var body=new URLSearchParams({key:c.key||'',project_key:S.project.jira||'SCRUM',source:inp.source,title:inp.title,date:inp.date||'',by:inp.by||'',clients:inp.clients||'',text:inp.text||'',source_ref:inp.docUrl||(inp.cardId?('launchpad-card:'+inp.cardId):''),source_link:inp.docUrl||'',item_type:inp.type||''});
     try{ await nfetch(nep('submit'),{method:'POST',body:body}); }
     catch(e){ push('Could not send it. '+nerr(e)); endRun(); ui.run.active=false; save(); renderAll(); return []; }
     push('n8n accepted it. The Orchestrator is reading it and checking Jira and Slack (read-only). This can take a minute.');
@@ -691,10 +692,11 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
     var notes=
       '<div class="row" style="justify-content:space-between;align-items:baseline"><h3 style="margin:0">All meeting notes</h3><span class="note-small mono" id="mn-count">'+allNotes.length+' of '+allNotes.length+' shown</span></div>'+
       '<div class="field"><label for="mn-search">Find a note</label><input id="mn-search" data-draft="mnSearch" value="'+esc(ui.drafts.mnSearch||'')+'" placeholder="Search by title, person, date or words in the transcript"></div>'+
-      '<div id="mn-list">'+(allNotes.length?allNotes.map(function(n){var hay=((n.title||'')+' '+(n.by||'')+' '+(n.date||'')+' '+(n.text||'')).toLowerCase();return '<details class="log mn-item" id="note-'+esc(n.id)+'" data-hay="'+esc(hay)+'"><summary><b>'+esc(n.title)+'</b> <span class="note-small mono">'+fmtDay(n.date)+' · '+esc(n.by||'')+' · '+esc(n.status)+'</span></summary>'+(n.video&&/^https:\/\//.test(n.video)?'<p class="note-small" style="margin-top:8px">Recording: <a href="'+esc(n.video)+'" target="_blank" rel="noopener">Open video &#8599;</a></p>':'')+'<blockquote style="white-space:pre-wrap">'+esc(n.text)+'</blockquote></details>'}).join(''):'<p class="muted">No meeting notes yet.</p>')+'</div>'+
+      '<div id="mn-list">'+(allNotes.length?allNotes.map(function(n){var hay=((n.title||'')+' '+(n.by||'')+' '+(n.date||'')+' '+(n.text||'')+' '+(n.excerpts||[]).join(' ')).toLowerCase();var doc=MeetingNotes.googleDocUrl(n.docUrl);return '<details class="log mn-item" id="note-'+esc(n.id)+'" data-hay="'+esc(hay)+'"><summary><b>'+esc(n.title)+'</b> <span class="note-small mono">'+fmtDay(n.date)+' · '+esc(n.by||'')+' · '+esc(n.status)+'</span></summary>'+(doc?'<p style="margin-top:8px"><a class="btn small" href="'+esc(doc)+'" target="_blank" rel="noopener">Open full meeting notes in Google Docs &#8599;</a></p>':'<p class="note-small" style="margin-top:8px">Google Doc link not provided.</p>')+'<form data-form="note-link" data-id="'+esc(n.id)+'" class="row" style="margin-top:8px"><div class="field"><label for="mn-doc-'+esc(n.id)+'">Google Doc link</label><input id="mn-doc-'+esc(n.id)+'" name="docUrl" type="url" required value="'+esc(doc)+'" placeholder="https://docs.google.com/document/d/..."></div><button class="btn small" type="submit">Save link</button></form>'+(n.video&&/^https:\/\//.test(n.video)?'<p class="note-small" style="margin-top:8px">Recording: <a href="'+esc(n.video)+'" target="_blank" rel="noopener">Open video &#8599;</a></p>':'')+(n.imported?'<h4 class="eyebrow" style="margin-top:12px">Excerpts from n8n</h4>':'')+'<blockquote style="white-space:pre-wrap">'+esc(n.imported?(n.excerpts||[]).join('\n\n'):n.text)+'</blockquote></details>'}).join(''):'<p class="muted">No meeting notes yet.</p>')+'</div>'+
       '<details><summary>Add meeting notes</summary><form data-form="notes" class="stack" style="gap:10px;margin-top:12px">'+
       '<div class="grid2"><div class="field"><label for="mn-title">Title</label><input id="mn-title" required data-draft="mnTitle" value="'+esc(ui.drafts.mnTitle||'')+'" placeholder="Reporting Manager weekly sync"></div><div class="field"><label for="mn-date">Meeting date</label><input id="mn-date" type="date" required data-draft="mnDate" value="'+esc(ui.drafts.mnDate||'2026-10-16')+'"></div></div>'+
       '<div class="field"><label for="mn-video">Video or recording link (optional)</label><input id="mn-video" type="url" data-draft="mnVideo" value="'+esc(ui.drafts.mnVideo||'')+'" placeholder="https://www.loom.com/share/..."></div>'+
+      '<div class="field"><label for="mn-doc">Google Doc link</label><input id="mn-doc" type="url" data-draft="mnDoc" value="'+esc(ui.drafts.mnDoc||'')+'" placeholder="https://docs.google.com/document/d/..."></div>'+
       '<div class="field"><label for="mn-text">Notes or transcript</label><textarea id="mn-text" required style="min-height:150px" data-draft="mnText" placeholder="Paste the transcript here">'+esc(ui.drafts.mnText||'')+'</textarea></div>'+
       '<div class="row"><button class="btn primary" type="submit" '+(busy?'disabled':'')+'>'+(busy?'Agents working...':'Send to orchestrator')+'</button><button class="btn" type="button" data-action="sample-note" '+(busy?'disabled':'')+'>Load sample transcript</button></div>'+runningNote()+'</form></details>';
     var proto=
@@ -961,13 +963,19 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
       if(!can.invite()||!D.invEmail) return;
       S.stakeholders.push({name:D.invEmail,role:D.invRole||'dev'}); logEntry({kind:'invite',title:'Invited '+D.invEmail+' as '+PERSONAS[D.invRole||'dev'],note:'Invite recorded. Email sending is not connected in this prototype.',effects:[]});
       D.invEmail=''; save(); renderAll(); toast('Invite recorded.');
+    } else if(kind==='note-link'){
+      var targetNote=S.notes.find(function(n){return n.id===f.dataset.id});
+      var docLink=MeetingNotes.googleDocUrl(new FormData(f).get('docUrl'));
+      if(!docLink){ toast('Use the link to a specific Google Doc.'); return; }
+      if(targetNote){ targetNote.docUrl=docLink; save(); renderArtifacts(); toast('Google Doc link saved.'); }
     } else if(kind==='notes'){
       if(!D.mnText||D.mnText.trim().length<20) { toast('Add the notes or transcript first.'); return; }
       var vid=(D.mnVideo||'').trim(); if(vid&&!/^https:\/\//.test(vid)){ toast('The video link should start with https://'); return; }
-      var id='n'+Date.now(), note={id:id,title:D.mnTitle||'Meeting notes',date:D.mnDate||'2026-10-16',by:personaName(),status:'processing',text:D.mnText,video:vid};
-      S.notes.unshift(note); var snap={title:note.title,date:note.date,text:note.text}; D.mnTitle='';D.mnText='';D.mnVideo='';
+      var docUrl=MeetingNotes.googleDocUrl(D.mnDoc); if(D.mnDoc&&!docUrl){ toast('Use the link to a specific Google Doc.'); return; }
+      var id='n'+Date.now(), note={id:id,title:D.mnTitle||'Meeting notes',date:D.mnDate||new Date().toISOString().slice(0,10),by:personaName(),status:'processing',text:D.mnText,video:vid,docUrl:docUrl};
+      S.notes.unshift(note); var snap={title:note.title,date:note.date,text:note.text,docUrl:note.docUrl}; D.mnTitle='';D.mnText='';D.mnVideo='';D.mnDoc=''; save();
       renderArtifacts();
-      var keys=await runAgent({source:'Meeting Notes',title:snap.title,date:snap.date,by:personaName(),text:snap.text,type:'requirement_change'});
+      var keys=await runAgent({source:'Meeting Notes',title:snap.title,date:snap.date,by:personaName(),text:snap.text,docUrl:snap.docUrl,type:'requirement_change'});
       note.status=keys?'processed':'not processed'; save(); renderArtifacts(); scrollToMonitor();
     } else if(kind==='card'){
       if(!D.fcBody||!D.fcBody.trim()) return;
@@ -1020,6 +1028,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
   function importRows(rowsIn,label,quiet){
     var raw=ui.drafts.import||''; var rows;
     if(rowsIn) rows=rowsIn; else try{ rows=JSON.parse(raw); if(!Array.isArray(rows)) rows=rows.items||rows.data||rows.rows||[]; }catch(err){ toast('That is not valid JSON. Paste the rows exactly as exported.'); return; }
+    var notesChanged=MeetingNotes.importSources(S.notes,rows);
     var n=0, types=['blocker','requirement_change','feedback','comment','milestone'];
     var list=function(v){ return Array.isArray(v)? v.map(function(s){return String(s)}).filter(Boolean) : String(v||'').split('\n').map(function(s){return s.replace(/^\s*-\s*/,'').trim()}).filter(Boolean); };
     var sects=function(v){ var a=Array.isArray(v)? v.map(function(s){return String(s).trim()}) : String(v||'').split(',').map(function(s){return s.trim()}); return a.filter(function(s){return SECTIONS.indexOf(s)>-1}); };
@@ -1034,15 +1043,17 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
         type:types.indexOf(r.item_type)>-1?r.item_type:(src==='Feedback Card'?'feedback':(src==='Meeting Notes'?'requirement_change':'comment')),
         priority:prio(r),points:pts.length?pts:['(no key points)'],raw:String(r.raw_text||''),
         affected:sects(r.affected_sections),
-        change:r.proposed_change?String(r.proposed_change):'Review and decide.',impact:r.impact?String(r.impact):'Not assessed.',reason:r.attention_reason?String(r.attention_reason):'',link:r.source_link?String(r.source_link):'',clients:'',cardId:((String(r.source_ref||'').match(/launchpad-card:([^;\s]+)/)||[])[1]||undefined),status:st,created:new Date().toISOString()});
+        change:r.proposed_change?String(r.proposed_change):'Review and decide.',impact:r.impact?String(r.impact):'Not assessed.',reason:r.attention_reason?String(r.attention_reason):'',link:r.source_link?String(r.source_link):'',sourceRef:r.source_ref?String(r.source_ref):'',clients:'',cardId:((String(r.source_ref||'').match(/launchpad-card:([^;\s]+)/)||[])[1]||undefined),status:st,created:new Date().toISOString()});
       ui.fresh[key]=true; n++;
     });
+    if(notesChanged){ save(); renderArtifacts(); }
     if(n){ logEntry({kind:'import',title:(label==='n8n sync'?'Synced ':'Imported ')+plural(n,'item')+' from the n8n Action Items table',note:'',effects:[]}); ui.drafts.import=''; ui.importOpen=false; save(); renderAll(); if(quiet!=='silent') toast(plural(n,'item')+' added to the queue.'); }
     else if(quiet!=='silent'&&!quiet) toast('No new rows found. Every row is added, even when some fields are empty; only exact duplicates are skipped.');
     else if(quiet!=='silent') toast('Already up to date. No new pending items in n8n.');
     return n;
   }
 
+  if(MeetingNotes.importSources(S.notes,S.items)) save();
   renderAll();
   if(nconnected()) nSync();
 })();
