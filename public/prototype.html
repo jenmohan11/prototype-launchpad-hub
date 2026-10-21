@@ -510,9 +510,10 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
     var s2=parts.length? 'You have '+parts.join(', ').replace(/, ([^,]*)$/,(parts.length>2?', and ':' and ')+'$1')+' to review.' : 'Nothing is waiting for your decision.';
     var s3=top? 'Highest priority action needed: decide on "'+top.title+'"'+(c.delayed?' ('+c.delayed+' delayed).':'.') : (c.delayed? plural(c.delayed,'item')+' delayed; revisit when ready.':'Add meeting notes or feedback to start the next round.');
     var rs=S.remote&&S.remote.sections&&S.remote.sections.summary&&S.remote.sections.summary.content; if(rs) s1=String(rs).trim();
-    var da=(S.designAdds||[]); if(da.length) s2+=' New design files added: '+da.slice(0,4).map(function(d){return d.what+' ('+fmtDay(d.at)+')'}).join(', ')+'.';
-    else { var L=S.links||{}, have=[]; if(L.prototype) have.push('the Claude prototype'); if(L.miro) have.push('the Miro design board'); s2+= have.length? ' Prototype and design: '+have.join(' and ')+' '+(have.length>1?'are':'is')+' available for review.' : ' Prototype and design: no prototype or Miro board has been added yet.'; }
-    return [s1,s2,s3];
+    var s2b;
+    var da=(S.designAdds||[]); if(da.length) s2b='New design files added: '+da.slice(0,4).map(function(d){return d.what+' ('+fmtDay(d.at)+')'}).join(', ')+'.';
+    else { var L=S.links||{}, have=[]; if(L.prototype) have.push('the Claude prototype'); if(L.miro) have.push('the Miro design board'); s2b= have.length? 'Prototype and design: '+have.join(' and ')+' '+(have.length>1?'are':'is')+' available for review.' : 'Prototype and design: no prototype or Miro board has been added yet.'; }
+    return [s1,s2,s2b,s3];
   }
 
   /* ---------- renderers ---------- */
