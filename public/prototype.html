@@ -373,7 +373,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
   function seed(){ return {persona:'admin', current:'rm', projects:{rm:seedRM(), ar:seedAR(), ac:seedAC(), be:seedBE()}}; }
   var ORDER=['rm','ar','ac','be'];
 
-  var G, S, ui={editingCard:null,tab:'pending',filter:'all',expanded:null,drawerOpen:false,menuOpen:false,open:{meetings:true},fbTab:'internal',drafts:{},fresh:{},run:null,importOpen:false,toast:''};
+  var G, S, ui={editingCard:null,tab:'pending',filter:'all',expanded:null,drawerOpen:false,menuOpen:false,open:{meetings:false},fbTab:'internal',drafts:{},fresh:{},run:null,importOpen:false,toast:''};
   function load(){ try{ var r=localStorage.getItem(KEY); if(r){ var p=JSON.parse(r); if(p&&p.projects&&p.projects[p.current]){ Object.keys(p.projects).forEach(function(k){ var pr=p.projects[k]; if(pr&&pr.items) pr.items=pr.items.filter(function(i){return i.key!=='scrum-jira-comment-90-day-timeouts-20261014';}); }); return p; } } }catch(e){} return seed(); }
   function save(){ try{ localStorage.setItem(KEY,JSON.stringify(G)); }catch(e){} }
   /* ---------- n8n connection (webhooks) ---------- */
@@ -691,12 +691,12 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
     var notes=
       '<div class="row" style="justify-content:space-between;align-items:baseline"><h3 style="margin:0">All meeting notes</h3><span class="note-small mono" id="mn-count">'+allNotes.length+' of '+allNotes.length+' shown</span></div>'+
       '<div class="field"><label for="mn-search">Find a note</label><input id="mn-search" data-draft="mnSearch" value="'+esc(ui.drafts.mnSearch||'')+'" placeholder="Search by title, person, date or words in the transcript"></div>'+
-      '<div id="mn-list">'+(allNotes.length?allNotes.map(function(n){var hay=((n.title||'')+' '+(n.by||'')+' '+(n.date||'')+' '+(n.text||'')).toLowerCase();return '<div class="log mn-item" id="note-'+esc(n.id)+'" data-hay="'+esc(hay)+'"><div class="row" style="justify-content:space-between"><b>'+esc(n.title)+'</b><span class="note-small mono">'+fmtDay(n.date)+' · '+esc(n.by||'')+' · '+esc(n.status)+'</span></div>'+(n.video&&/^https:\/\//.test(n.video)?'<p class="note-small" style="margin-top:2px">Recording: <a href="'+esc(n.video)+'" target="_blank" rel="noopener">Open video &#8599;</a></p>':'')+'<details><summary>Transcript</summary><blockquote style="white-space:pre-wrap">'+esc(n.text)+'</blockquote></details></div>'}).join(''):'<p class="muted">No meeting notes yet. Add one below and it is kept here so it can always be found.</p>')+'</div>'+
-      '<form data-form="notes" class="stack" style="gap:10px"><h3>Add meeting notes</h3><p class="note-small">Google Meet notes land in the Drive folder; here you can paste them directly. Standup notes work the same way. Every note stays in the repository above, so the whole history is always findable.</p>'+
+      '<div id="mn-list">'+(allNotes.length?allNotes.map(function(n){var hay=((n.title||'')+' '+(n.by||'')+' '+(n.date||'')+' '+(n.text||'')).toLowerCase();return '<details class="log mn-item" id="note-'+esc(n.id)+'" data-hay="'+esc(hay)+'"><summary><b>'+esc(n.title)+'</b> <span class="note-small mono">'+fmtDay(n.date)+' · '+esc(n.by||'')+' · '+esc(n.status)+'</span></summary>'+(n.video&&/^https:\/\//.test(n.video)?'<p class="note-small" style="margin-top:8px">Recording: <a href="'+esc(n.video)+'" target="_blank" rel="noopener">Open video &#8599;</a></p>':'')+'<blockquote style="white-space:pre-wrap">'+esc(n.text)+'</blockquote></details>'}).join(''):'<p class="muted">No meeting notes yet.</p>')+'</div>'+
+      '<details><summary>Add meeting notes</summary><form data-form="notes" class="stack" style="gap:10px;margin-top:12px">'+
       '<div class="grid2"><div class="field"><label for="mn-title">Title</label><input id="mn-title" required data-draft="mnTitle" value="'+esc(ui.drafts.mnTitle||'')+'" placeholder="Reporting Manager weekly sync"></div><div class="field"><label for="mn-date">Meeting date</label><input id="mn-date" type="date" required data-draft="mnDate" value="'+esc(ui.drafts.mnDate||'2026-10-16')+'"></div></div>'+
       '<div class="field"><label for="mn-video">Video or recording link (optional)</label><input id="mn-video" type="url" data-draft="mnVideo" value="'+esc(ui.drafts.mnVideo||'')+'" placeholder="https://www.loom.com/share/..."></div>'+
       '<div class="field"><label for="mn-text">Notes or transcript</label><textarea id="mn-text" required style="min-height:150px" data-draft="mnText" placeholder="Paste the transcript here">'+esc(ui.drafts.mnText||'')+'</textarea></div>'+
-      '<div class="row"><button class="btn primary" type="submit" '+(busy?'disabled':'')+'>'+(busy?'Agents working...':'Send to orchestrator')+'</button><button class="btn" type="button" data-action="sample-note" '+(busy?'disabled':'')+'>Load sample transcript</button></div>'+runningNote()+'</form>';
+      '<div class="row"><button class="btn primary" type="submit" '+(busy?'disabled':'')+'>'+(busy?'Agents working...':'Send to orchestrator')+'</button><button class="btn" type="button" data-action="sample-note" '+(busy?'disabled':'')+'>Load sample transcript</button></div>'+runningNote()+'</form></details>';
     var proto=
       '<p>Prototype and design files live in Claude and Miro.</p><div class="row">'+linkChip('prototype',(S.links||{}).prototype)+linkChip('Miro board',(S.links||{}).miro)+'</div>'+
       (can.control()?'<form data-form="links" class="stack" style="gap:10px"><h3>Add or change links</h3><div class="grid2"><div class="field"><label for="lk-proto">Claude prototype link</label><input id="lk-proto" type="url" data-draft="lkProto" value="'+esc(ui.drafts.lkProto!==undefined?ui.drafts.lkProto:((S.links||{}).prototype||''))+'" placeholder="https://claude.ai/artifact/..."></div><div class="field"><label for="lk-miro">Miro board link</label><input id="lk-miro" type="url" data-draft="lkMiro" value="'+esc(ui.drafts.lkMiro!==undefined?ui.drafts.lkMiro:((S.links||{}).miro||''))+'" placeholder="https://miro.com/app/board/..."></div></div><div class="row"><button class="btn primary" type="submit">Save links</button><span class="note-small">Must start with https://. Leave a box empty to remove that link. Only the Admin can change these.</span></div></form>':'')+
@@ -711,7 +711,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
       artBox('sov','Statement of Value','why, goals, key clients',sov)+
       artBox('req','Requirements','connected to Confluence · '+S.requirements.length,reqs)+
       artBox('feedback','Stakeholder Feedback','internal and clients · '+S.cards.length,fb)+
-      artBox('meetings','Meeting Notes and Videos','searchable repository · '+plural(S.notes.length,'note'),notes)+
+      artBox('meetings','Meeting Notes Repository','notes and recordings · '+plural(S.notes.length,'note'),notes)+
       artBox('prototype','Prototype and Design','Claude and Miro',proto)+
       artBox('log','Change Log','every decision · '+allLog.length,log);
     applyMnFilter();
@@ -908,7 +908,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
     else if(act==='menu-toggle'){ ui.menuOpen=!ui.menuOpen; renderNav(); }
     else if(act==='goto'){
       if(ui.run&&ui.run.active){ ui.menuOpen=false; renderNav(); toast('Wait for the agents to finish before switching projects.'); return; }
-      G.current=a.dataset.id; S=G.projects[G.current]; ui.menuOpen=false; ui.tab='pending'; ui.filter='all'; ui.expanded=null; ui.run=null; ui.fbTab='internal'; ui.drafts={}; ui.fresh={}; ui.open={meetings:true}; ui.importOpen=false;
+      G.current=a.dataset.id; S=G.projects[G.current]; ui.menuOpen=false; ui.tab='pending'; ui.filter='all'; ui.expanded=null; ui.run=null; ui.fbTab='internal'; ui.drafts={}; ui.fresh={}; ui.open={meetings:false}; ui.importOpen=false;
       save(); renderAll(); window.scrollTo(0,0);
     }
     else if(act==='open-card'){ ui.editingCard=null; ui.cardOpen=true; ui.menuOpen=false; renderModal(); renderNav(); }
