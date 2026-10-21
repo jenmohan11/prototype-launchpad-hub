@@ -23,7 +23,7 @@ describe('Meeting notes repository', () => {
     const notes = [{ id: 'n1', title: 'Kickoff sync' }, { id: 'n2', title: 'Requirements review', docUrl: doc }];
     api.importSources(notes, [{ source: 'Meeting Notes', source_link: doc }]);
     expect(notes).toHaveLength(2);
-    expect(notes[0].title).toBe('Kickoff sync');
+    expect(notes[0]?.title).toBe('Kickoff sync');
   });
   it('accepts only specific HTTPS Google documents', () => {
     expect(api.googleDocUrl(doc)).toBe(doc);
