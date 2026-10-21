@@ -450,12 +450,12 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
     push('Sending "'+inp.title+'" to the Orchestrator Agent in n8n');
     var body=new URLSearchParams({key:c.key||'',project_key:S.project.jira||'SCRUM',source:inp.source,title:inp.title,date:inp.date||'',by:inp.by||'',clients:inp.clients||'',text:inp.text||'',source_ref:inp.cardId?('launchpad-card:'+inp.cardId):'',item_type:inp.type||''});
     try{ await nfetch(nep('submit'),{method:'POST',body:body}); }
-    catch(e){ push('Could not send it. '+nerr(e)); ui.run.active=false; save(); renderAll(); return []; }
+    catch(e){ push('Could not send it. '+nerr(e)); endRun(); ui.run.active=false; save(); renderAll(); return []; }
     push('n8n accepted it. The Orchestrator is reading it and checking Jira and Slack (read-only). This can take a minute.');
     var got=0;
     for(var i=0;i<15;i++){ await sleep(6000); var rows=null; try{ var j=await nfetch(nurl(nep('items'),{project_key:S.project.jira||'SCRUM',key:c.key})); rows=Array.isArray(j)?j:(j.items||[]); }catch(e){ continue; } got=importRows(rows,'n8n sync','silent'); if(got>0) break; }
     push(got>0?'Done. '+plural(got,'item')+' waiting for the PM. Nothing on the page changed.':'Still working. Click Sync from n8n in a minute.');
-    ui.run.active=false; if(got>0){ ui.tab='pending'; ui.filter='all'; } save(); renderAll(); return [];
+    endRun(); ui.run.active=false; if(got>0){ ui.tab='pending'; ui.filter='all'; } save(); renderAll(); return [];
   }
   async function nTest(){
     var base=(ui.drafts.nBase!==undefined?ui.drafts.nBase:ncfg().base||'').trim().replace(/\/+$/,''), c={key:(ui.drafts.nKey!==undefined?ui.drafts.nKey:ncfg().key||'').trim()};
@@ -606,7 +606,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
     if(ui.tab==='pending' && ui.filter!=='all') list=list.filter(function(i){return i.type===ui.filter});
     var flt=[['all','All ('+pending().length+')'],['blocker','Blockers ('+c.blocker+')'],['requirement_change','Requirement changes ('+c.requirement_change+')'],['feedback','Feedback cards ('+c.feedback+')'],['comment','Comments ('+c.comment+')'],['milestone','Milestones ('+c.milestone+')']];
     var run='';
-    if(ui.run){ run='<div class="run" aria-live="polite"><ul class="plain">'+ui.run.lines.map(function(l){return '<li class="'+(l.sim?'sim':'')+'">'+(l.sim?'[simulated] ':'')+esc(l.t)+'</li>'}).join('')+'</ul>'+(ui.run.mode?'<div class="mode">Extraction: '+esc(ui.run.mode)+'</div>':'')+'</div>'; }
+    if(ui.run){ run='<div class="run" aria-live="polite"><ul class="plain">'+ui.run.lines.slice(-2).map(function(l){return '<li class="'+(l.sim?'sim':'')+'">'+(l.sim?'[simulated] ':'')+esc(l.t)+'</li>'}).join('')+'</ul>'+(ui.run.lines.length>2&&!ui.run.active?'<div class="mode">Earlier steps are in the Change Log.</div>':'')+(ui.run.mode?'<div class="mode">Extraction: '+esc(ui.run.mode)+'</div>':'')+'</div>'; }
     $('#sec-monitor').innerHTML=
       '<div class="monitor-head"><div><span class="eyebrow">Status monitor</span><h2>What needs your attention</h2></div>'+
       '<div class="row"><button class="btn small" type="button" data-action="open-card">Add feedback card</button>'+(can.approve()&&nconnected()?'<button class="btn small primary" type="button" data-action="n8n-sync" '+(ui.nbusy?'disabled':'')+'>'+(ui.nbusy?'Syncing...':'Sync from n8n')+'</button>':'')+(can.approve()?'<button class="btn small" type="button" data-action="import-toggle">'+(nconnected()?'Paste rows instead':'Import from n8n')+'</button>':'')+'</div></div>'+
@@ -699,7 +699,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
       '<form data-form="proto" class="stack" style="gap:10px"><h3>Prototype feedback</h3><div class="field"><label for="pf-body">Comment</label><textarea id="pf-body" required data-draft="pfBody" placeholder="What did you try, and what should change?">'+esc(ui.drafts.pfBody||'')+'</textarea></div><div class="row"><button class="btn primary" type="submit" '+(busy?'disabled':'')+'>Send feedback</button><span class="note-small">If the PM accepts it, they implement it.</span></div></form>';
     var allLog=S.log.concat(((S.remote&&S.remote.changelog)||[]).map(function(r){ return {kind:'applied',title:r.title||r.item_key,note:r.note||'',effects:String(r.effects||'').split('\n').filter(Boolean),at:r.at||''}; })).sort(function(a,b){return String(b.at)>String(a.at)?1:-1});
     var log=allLog.length? allLog.map(function(l){
-      return '<div class="log"><div class="log-head"><span class="pill plain">'+esc(({accept:'Accepted',reject:'Rejected',delay:'Delayed',reopen:'Reopened',created:'Created',lock:'Prototype',reqdone:'Milestone',invite:'Access',import:'Import',applied:'Agents applied'})[l.kind]||l.kind)+'</span><b>'+esc(l.title)+'</b><span class="note-small mono">'+esc(fmtStamp(l.at))+'</span></div>'+(l.note?'<p class="muted" style="margin-top:4px">'+esc(l.note)+'</p>':'')+((l.effects&&l.effects.length)?'<p class="note-small" style="margin-top:4px">'+l.effects.map(esc).join(' · ')+'</p>':'')+'</div>';
+      return '<div class="log"><div class="log-head"><span class="pill plain">'+esc(({accept:'Accepted',reject:'Rejected',delay:'Delayed',reopen:'Reopened',created:'Created',lock:'Prototype',reqdone:'Milestone',invite:'Access',import:'Import',agents:'Agent run',applied:'Agents applied'})[l.kind]||l.kind)+'</span><b>'+esc(l.title)+'</b><span class="note-small mono">'+esc(fmtStamp(l.at))+'</span></div>'+(l.note?'<p class="muted" style="margin-top:4px">'+esc(l.note)+'</p>':'')+((l.effects&&l.effects.length)?'<p class="note-small" style="margin-top:4px">'+l.effects.map(esc).join(' · ')+'</p>':'')+'</div>';
     }).join('') : '<p class="muted">No changes yet.</p>';
     $('#sec-artifacts').innerHTML='<span class="eyebrow">Artifacts</span><h2>Everything behind this project</h2>'+
       artBox('sov','Statement of Value','why, goals, key clients',sov)+
@@ -736,6 +736,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
   function renderAll(){ renderNav(); renderProject(); renderProgress(); renderDrawer(); renderModal(); renderMonitor(); renderSlack(); renderArtifacts(); }
   function toast(msg){ ui.toast=msg; var t=$('#toast'); t.textContent=msg; t.hidden=false; clearTimeout(toast._t); toast._t=setTimeout(function(){t.hidden=true},5000); }
   function logEntry(o){ o.at=new Date().toISOString(); S.log.unshift(o); }
+  function endRun(){ if(!ui.run) return; var lines=ui.run.lines.filter(function(l){return l.t}); var earlier=lines.slice(0,Math.max(0,lines.length-2)); if(earlier.length) logEntry({kind:'agents',title:'Agent run: '+ui.run.title,note:earlier.map(function(l){return (l.sim?'[simulated] ':'')+l.t}).join(' · '),effects:[]}); }
 
   /* ---------- decisions ---------- */
   function decide(key,decision){
@@ -849,7 +850,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
       ui.fresh[key]=true; keys.push(key);
     });
     ui.run.mode=mode; push('Done. '+plural(keys.length,'item')+' waiting for the PM. Nothing on the page changed.');
-    ui.run.active=false; ui.tab='pending'; ui.filter='all';
+    endRun(); ui.run.active=false; ui.tab='pending'; ui.filter='all';
     save(); renderAll();
     return keys;
   }
@@ -880,7 +881,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
       push('create_action_item: Requirements draft added (status pending)');
       push('Done. 1 item waiting for the PM. Nothing on the page changed.');
     }
-    ui.run.active=false; save(); renderAll();
+    endRun(); ui.run.active=false; save(); renderAll();
   }
   function scrollToMonitor(){ var el=$('#sec-monitor'); if(el&&el.scrollIntoView) el.scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'}); }
 
