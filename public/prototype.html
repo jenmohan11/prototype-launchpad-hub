@@ -227,7 +227,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
 
   var TYPE_LABEL={blocker:'Blocker',requirement_change:'Requirement change',feedback:'Feedback card',comment:'Comment',milestone:'Milestone'};
   var TYPE_ORDER={blocker:0,requirement_change:1,feedback:2,comment:3,milestone:4};
-  function typeLabel(it){ if(it.type!=='comment') return TYPE_LABEL[it.type]||it.type; var src=String(it.source||'').trim(); if(!src) return 'Comment'; return /comment/i.test(src)?src.replace(/comment/i,'comment'):src+' comment'; }
+  function typeLabel(it){ if(it.type!=='comment') return TYPE_LABEL[it.type]||it.type; var src=String(it.source||'').replace(/\s*feedback\b/i,'').trim(); if(!src) return 'Comment'; return /comment/i.test(src)?src.replace(/comment/i,'comment'):src+' comment'; }
   function fmtSprintDay(d,yr){ var t=new Date(d); if(isNaN(t)) return String(d); return t.toLocaleDateString('en-US',{month:'short',day:'numeric',timeZone:'UTC'})+(yr?', '+t.getUTCFullYear():''); }
   function applySprint(j){
     if(!j||typeof j!=='object') return false; var it0=(j.items&&j.items[0])||{};
