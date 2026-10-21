@@ -685,10 +685,14 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
     var fb=
       '<div class="tabs" role="tablist" style="margin-top:0">'+[['internal','Internal'],['client','Clients']].map(function(t){return '<button role="tab" type="button" data-action="fbtab" data-v="'+t[0]+'" aria-selected="'+(ui.fbTab===t[0])+'">'+t[1]+'</button>'}).join('')+'</div>'+
       '<div>'+(cards.length?cards.map(function(c){return cardHtml(c,true)}).join(''):'<p class="muted">No cards in this tab yet.</p>')+'</div>';
+    var allNotes=S.notes.slice().sort(function(a,b){return String(b.date).localeCompare(String(a.date))});
     var notes=
-      '<div>'+S.notes.map(function(n){return '<div class="log" id="note-'+esc(n.id)+'"><div class="row" style="justify-content:space-between"><b>'+esc(n.title)+'</b><span class="note-small mono">'+fmtDay(n.date)+' · '+esc(n.status)+'</span></div><details><summary>Transcript</summary><blockquote style="white-space:pre-wrap">'+esc(n.text)+'</blockquote></details></div>'}).join('')+'</div>'+
-      '<form data-form="notes" class="stack" style="gap:10px"><h3>Add meeting notes</h3><p class="note-small">Google Meet notes land in the Drive folder; here you can paste them directly. Standup notes work the same way.</p>'+
+      '<div class="row" style="justify-content:space-between;align-items:baseline"><h3 style="margin:0">All meeting notes</h3><span class="note-small mono" id="mn-count">'+allNotes.length+' of '+allNotes.length+' shown</span></div>'+
+      '<div class="field"><label for="mn-search">Find a note</label><input id="mn-search" data-draft="mnSearch" value="'+esc(ui.drafts.mnSearch||'')+'" placeholder="Search by title, person, date or words in the transcript"></div>'+
+      '<div id="mn-list">'+(allNotes.length?allNotes.map(function(n){var hay=((n.title||'')+' '+(n.by||'')+' '+(n.date||'')+' '+(n.text||'')).toLowerCase();return '<div class="log mn-item" id="note-'+esc(n.id)+'" data-hay="'+esc(hay)+'"><div class="row" style="justify-content:space-between"><b>'+esc(n.title)+'</b><span class="note-small mono">'+fmtDay(n.date)+' · '+esc(n.by||'')+' · '+esc(n.status)+'</span></div>'+(n.video&&/^https:\/\//.test(n.video)?'<p class="note-small" style="margin-top:2px">Recording: <a href="'+esc(n.video)+'" target="_blank" rel="noopener">Open video &#8599;</a></p>':'')+'<details><summary>Transcript</summary><blockquote style="white-space:pre-wrap">'+esc(n.text)+'</blockquote></details></div>'}).join(''):'<p class="muted">No meeting notes yet. Add one below and it is kept here so it can always be found.</p>')+'</div>'+
+      '<form data-form="notes" class="stack" style="gap:10px"><h3>Add meeting notes</h3><p class="note-small">Google Meet notes land in the Drive folder; here you can paste them directly. Standup notes work the same way. Every note stays in the repository above, so the whole history is always findable.</p>'+
       '<div class="grid2"><div class="field"><label for="mn-title">Title</label><input id="mn-title" required data-draft="mnTitle" value="'+esc(ui.drafts.mnTitle||'')+'" placeholder="Reporting Manager weekly sync"></div><div class="field"><label for="mn-date">Meeting date</label><input id="mn-date" type="date" required data-draft="mnDate" value="'+esc(ui.drafts.mnDate||'2026-10-16')+'"></div></div>'+
+      '<div class="field"><label for="mn-video">Video or recording link (optional)</label><input id="mn-video" type="url" data-draft="mnVideo" value="'+esc(ui.drafts.mnVideo||'')+'" placeholder="https://www.loom.com/share/..."></div>'+
       '<div class="field"><label for="mn-text">Notes or transcript</label><textarea id="mn-text" required style="min-height:150px" data-draft="mnText" placeholder="Paste the transcript here">'+esc(ui.drafts.mnText||'')+'</textarea></div>'+
       '<div class="row"><button class="btn primary" type="submit" '+(busy?'disabled':'')+'>'+(busy?'Agents working...':'Send to orchestrator')+'</button><button class="btn" type="button" data-action="sample-note" '+(busy?'disabled':'')+'>Load sample transcript</button></div>'+runningNote()+'</form>';
     var proto=
@@ -705,9 +709,16 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
       artBox('sov','Statement of Value','why, goals, key clients',sov)+
       artBox('req','Requirements','connected to Confluence · '+S.requirements.length,reqs)+
       artBox('feedback','Stakeholder Feedback','internal and clients · '+S.cards.length,fb)+
-      artBox('meetings','Meeting Notes and Videos','Drive, Google Meet, standups · '+S.notes.length,notes)+
+      artBox('meetings','Meeting Notes and Videos','searchable repository · '+plural(S.notes.length,'note'),notes)+
       artBox('prototype','Prototype and Design','Claude and Miro',proto)+
       artBox('log','Change Log','every decision · '+allLog.length,log);
+    applyMnFilter();
+  }
+  function applyMnFilter(){
+    var inp=$('#mn-search'); if(!inp) return;
+    var q=(inp.value||'').trim().toLowerCase(), items=document.querySelectorAll('.mn-item'), shown=0;
+    items.forEach(function(el){ var hit=!q||el.dataset.hay.indexOf(q)>-1; el.style.display=hit?'':'none'; if(hit) shown++; });
+    var c=$('#mn-count'); if(c) c.textContent=shown+' of '+items.length+' shown';
   }
 
   function renderModal(){
@@ -936,6 +947,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
   document.addEventListener('input',function(e){
     var k=e.target.dataset&&e.target.dataset.draft; if(!k) return;
     ui.drafts[k]=e.target.value;
+    if(k==='mnSearch'){ applyMnFilter(); return; }
     if(k.indexOf('note:')===0){ var box=e.target.closest('.decision'); if(box) box.querySelectorAll('[data-decide]').forEach(function(b){ b.disabled=!e.target.value.trim(); }); }
   });
   document.addEventListener('change',function(e){ var fk=e.target.dataset&&e.target.dataset.files; if(fk){ ui.drafts[fk]=Array.prototype.map.call(e.target.files||[],function(f){return f.name}); renderModal(); return; }
@@ -949,8 +961,9 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
       D.invEmail=''; save(); renderAll(); toast('Invite recorded.');
     } else if(kind==='notes'){
       if(!D.mnText||D.mnText.trim().length<20) { toast('Add the notes or transcript first.'); return; }
-      var id='n'+Date.now(), note={id:id,title:D.mnTitle||'Meeting notes',date:D.mnDate||'2026-10-16',by:personaName(),status:'processing',text:D.mnText};
-      S.notes.unshift(note); var snap={title:note.title,date:note.date,text:note.text}; D.mnTitle='';D.mnText='';
+      var vid=(D.mnVideo||'').trim(); if(vid&&!/^https:\/\//.test(vid)){ toast('The video link should start with https://'); return; }
+      var id='n'+Date.now(), note={id:id,title:D.mnTitle||'Meeting notes',date:D.mnDate||'2026-10-16',by:personaName(),status:'processing',text:D.mnText,video:vid};
+      S.notes.unshift(note); var snap={title:note.title,date:note.date,text:note.text}; D.mnTitle='';D.mnText='';D.mnVideo='';
       renderArtifacts();
       var keys=await runAgent({source:'Meeting Notes',title:snap.title,date:snap.date,by:personaName(),text:snap.text,type:'requirement_change'});
       note.status=keys?'processed':'not processed'; save(); renderArtifacts(); scrollToMonitor();
