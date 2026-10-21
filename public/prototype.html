@@ -389,7 +389,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
   }
   async function sendFeedbackCard(card,event){
     var payload={event:event,card_id:card.id,project_key:S.project.jira||'SCRUM',title:(card.body||'').split('\n')[0].slice(0,80),
-      submitter_name:card.by||personaName(),submitter_email:card.email||G.email||'',audience:card.audience||'internal',
+      submitter_name:card.name||card.by||personaName(),submitter_email:card.email||'',audience:card.audience||'internal',
       feedback:card.body||'',card_link:card.loom||'',submitted_at:new Date().toISOString()};
     try{ var j=await nfetch('/api/n8n/feedback-card',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
       if(j&&j.received) toast('Feedback card sent to n8n. Refreshing the list in 20 seconds.');
@@ -706,6 +706,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
       '<div class="grid2"><div class="field"><label for="fc-by">Submitted by</label><input id="fc-by" readonly value="'+esc(personaName())+'"></div>'+
       '<div class="field"><label for="fc-aud">Who is this from?</label><select id="fc-aud" data-draft="fcAud"><option value="internal">Internal team</option><option value="client"'+(D.fcAud==='client'?' selected':'')+'>A client</option></select></div></div>'+
       '<div class="field"><label for="fc-body">Feedback</label><textarea id="fc-body" required style="min-height:110px" data-draft="fcBody" placeholder="Describe the use case or requirement, and why it matters.">'+esc(D.fcBody||'')+'</textarea></div>'+
+      '<div class="row" style="gap:10px;flex-wrap:wrap"><div class="field" style="flex:1;min-width:150px"><label for="fc-name">Your name</label><input id="fc-name" required data-draft="fcName" value="'+esc(D.fcName||'')+'" placeholder="Jane Smith"></div><div class="field" style="flex:1;min-width:150px"><label for="fc-email">Your email</label><input id="fc-email" type="email" required data-draft="fcEmail" value="'+esc(D.fcEmail||'')+'" placeholder="jane@company.com"></div></div>'+
       '<div class="field"><label for="fc-clients">Clients who requested it, use it or need it</label><input id="fc-clients" data-draft="fcClients" value="'+esc(D.fcClients||'')+'" placeholder="Client A, Client C"></div>'+
       '<div class="grid2"><div class="field"><label for="fc-loom">Loom video link (optional)</label><input id="fc-loom" type="url" data-draft="fcLoom" value="'+esc(D.fcLoom||'')+'" placeholder="https://www.loom.com/share/..."></div>'+
       '<div class="field"><label for="fc-files">Screenshots (optional)</label><input id="fc-files" type="file" accept="image/*" multiple data-files="fcFiles"></div></div>'+
@@ -715,7 +716,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
   }
   function closeCard(){
     ui.cardOpen=false;
-    if(ui.editingCard){ ui.editingCard=null; ui.drafts.fcBody='';ui.drafts.fcClients='';ui.drafts.fcLoom='';ui.drafts.fcFiles=[];ui.drafts.fcAud=''; }
+    if(ui.editingCard){ ui.editingCard=null; ui.drafts.fcBody='';ui.drafts.fcClients='';ui.drafts.fcLoom='';ui.drafts.fcFiles=[];ui.drafts.fcAud='';ui.drafts.fcName='';ui.drafts.fcEmail=''; }
     renderModal(); var cb=$('#card-btn'); if(cb) cb.focus();
   }
   function renderAll(){ renderNav(); renderProject(); renderProgress(); renderDrawer(); renderModal(); renderMonitor(); renderSlack(); renderArtifacts(); }
@@ -884,7 +885,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
     }
     else if(act==='open-card'){ ui.editingCard=null; ui.cardOpen=true; ui.menuOpen=false; renderModal(); renderNav(); }
     else if(act==='close-card'){ closeCard(); }
-    else if(act==='edit-card'){ var ec=S.cards.find(function(x){return x.id===a.dataset.id}); if(ec&&canEditCard(ec)){ ui.editingCard=ec.id; ui.drafts.fcAud=ec.audience; ui.drafts.fcBody=ec.body; ui.drafts.fcClients=ec.clients||''; ui.drafts.fcLoom=ec.loom||''; ui.drafts.fcFiles=(ec.files||[]).slice(); ui.cardOpen=true; renderModal(); } }
+    else if(act==='edit-card'){ var ec=S.cards.find(function(x){return x.id===a.dataset.id}); if(ec&&canEditCard(ec)){ ui.editingCard=ec.id; ui.drafts.fcAud=ec.audience; ui.drafts.fcBody=ec.body; ui.drafts.fcClients=ec.clients||''; ui.drafts.fcLoom=ec.loom||''; ui.drafts.fcName=ec.name||ec.by||''; ui.drafts.fcEmail=ec.email||''; ui.drafts.fcFiles=(ec.files||[]).slice(); ui.cardOpen=true; renderModal(); } }
     else if(act==='clear-files'){ ui.drafts.fcFiles=[]; renderModal(); }
     else if(act==='settings-toggle'){ ui.drawerOpen=true; renderDrawer(); renderNav(); var cb=$('#drawer-close'); if(cb) cb.focus(); }
     else if(act==='close-drawer'){ ui.drawerOpen=false; renderDrawer(); renderNav(); var sb=$('#set-btn'); if(sb) sb.focus(); }
@@ -941,11 +942,12 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
     } else if(kind==='card'){
       if(!D.fcBody||!D.fcBody.trim()) return;
       if(ui.run&&ui.run.active){ toast('The agents are still working. Try again in a moment.'); return; }
+      var nm=(D.fcName||'').trim(), em=(D.fcEmail||'').trim(); if(!nm){ toast('Please add your name.'); return; } if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){ toast('Please add a valid email.'); return; }
       var loom=(D.fcLoom||'').trim(); if(loom&&!/^https:\/\//.test(loom)){ toast('The Loom link should start with https://'); return; }
       if(ui.editingCard){
         var ec2=S.cards.find(function(x){return x.id===ui.editingCard});
         if(!ec2||!canEditCard(ec2)){ toast('This card can no longer be edited.'); closeCard(); renderArtifacts(); return; }
-        ec2.audience=D.fcAud||'internal'; ec2.body=D.fcBody.trim(); ec2.clients=(D.fcClients||'').trim(); ec2.loom=loom; ec2.files=(D.fcFiles||[]).slice(); ec2.edited='2026-10-16';
+        ec2.audience=D.fcAud||'internal'; ec2.body=D.fcBody.trim(); ec2.clients=(D.fcClients||'').trim(); ec2.loom=loom; ec2.files=(D.fcFiles||[]).slice(); ec2.edited='2026-10-16'; ec2.name=nm; ec2.email=em; ec2.by=nm;
         ui.fbTab=ec2.audience; ui.open.feedback=true;
         var etxt=ec2.body+(ec2.clients?'\nClients: '+ec2.clients:'')+(loom?'\nLoom video: '+loom:'')+(ec2.files.length?'\nAttachments: '+ec2.files.join(', '):'');
         var hasPending=S.items.some(function(x){return x.cardId===ec2.id&&x.status==='pending'});
@@ -956,10 +958,10 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
         return;
       }
       var aud=D.fcAud||'internal', cid='c'+Date.now(), body=D.fcBody.trim(), cl=(D.fcClients||'').trim(), fl=D.fcFiles||[];
-      S.cards.unshift({id:cid,owner:G.persona,audience:aud,by:personaName(),date:'2026-10-16',clients:cl,body:body,loom:loom,files:fl}); ui.fbTab=aud; ui.open.feedback=true;
+      S.cards.unshift({id:cid,owner:G.persona,audience:aud,by:nm,name:nm,email:em,date:'2026-10-16',clients:cl,body:body,loom:loom,files:fl}); ui.fbTab=aud; ui.open.feedback=true;
       var txt=body+(cl?'\nClients: '+cl:'')+(loom?'\nLoom video: '+loom:'')+(fl.length?'\nAttachments: '+fl.join(', '):'');
       D.fcBody='';D.fcClients='';D.fcLoom='';D.fcFiles=[]; ui.cardOpen=false; save(); renderModal(); renderArtifacts(); sendFeedbackCard(S.cards[0],'submitted');
-      await runAgent({source:'Feedback Card',title:body.slice(0,60),date:'2026-10-16',by:personaName(),text:txt,clients:cl,type:'feedback',cardId:cid}); scrollToMonitor();
+      await runAgent({source:'Feedback Card',title:body.slice(0,60),date:'2026-10-16',by:nm,text:txt,clients:cl,type:'feedback',cardId:cid}); scrollToMonitor();
     } else if(kind==='n8nkey'){ return;
       
     } else if(kind==='n8n'){
