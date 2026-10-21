@@ -244,11 +244,6 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
         {name:'Jen Mohan', role:'admin'},{name:'Dev lead', role:'dev'},{name:'Data lead', role:'dev'},{name:'Sales lead', role:'business'},{name:'Client manager', role:'business'}
       ],
       items:[
-        {key:'scrum-jira-comment-90-day-timeouts-20261014', title:'Reporting API times out on date ranges over 90 days', source:'Jira Comment', by:'Dev lead', date:'2026-10-14', type:'blocker', priority:'high',
-          points:['Queries over 90 days exceed the 30-second gateway limit.','Scheduled quarterly reports fail until this is fixed.','The data team proposed pre-aggregated tables but has not given a date.'],
-          raw:'Any range past 90 days returns a gateway timeout. Quarterly schedules fail every run. Data team says pre-aggregation is the fix but is not scheduled.',
-          affected:['Jira','Timeline'], change:'Add a blocker and cap custom date ranges at 90 days for the beta unless the data team commits to pre-aggregation by Oct 20.',
-          impact:'Quarterly reports cannot ship in the beta; reports up to 90 days are unaffected.', reason:'Blocks a headline feature and has no committed date.', status:'pending'},
         {key:'scrum-meeting-notes-legal-export-review-20261001', title:'CSV and PDF export is on hold for a legal review of data fields', source:'Meeting Notes', by:'Product ops', date:'2026-10-01', type:'blocker', priority:'medium', noteId:'n1',
           points:['Legal must review which customer data fields can appear in exports.','The review date was not confirmed in the meeting.'],
           raw:'Legal needs to review which customer data fields appear in exports before we ship CSV or PDF. They have not given us a date.',
@@ -366,7 +361,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
   var ORDER=['rm','ar','ac','be'];
 
   var G, S, ui={editingCard:null,tab:'pending',filter:'all',expanded:null,drawerOpen:false,menuOpen:false,open:{meetings:true},fbTab:'internal',drafts:{},fresh:{},run:null,importOpen:false,toast:''};
-  function load(){ try{ var r=localStorage.getItem(KEY); if(r){ var p=JSON.parse(r); if(p&&p.projects&&p.projects[p.current]) return p; } }catch(e){} return seed(); }
+  function load(){ try{ var r=localStorage.getItem(KEY); if(r){ var p=JSON.parse(r); if(p&&p.projects&&p.projects[p.current]){ Object.keys(p.projects).forEach(function(k){ var pr=p.projects[k]; if(pr&&pr.items) pr.items=pr.items.filter(function(i){return i.key!=='scrum-jira-comment-90-day-timeouts-20261014';}); }); return p; } } }catch(e){} return seed(); }
   function save(){ try{ localStorage.setItem(KEY,JSON.stringify(G)); }catch(e){} }
   /* ---------- n8n connection (webhooks) ---------- */
   var NKEY='launchpad-n8n-cfg';
