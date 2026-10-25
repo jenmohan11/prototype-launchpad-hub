@@ -681,7 +681,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
       '<p class="note-small">Linked to Confluence. Accepted requirement changes appear here and queue a write-back (not connected in this prototype).</p>'+
       '<div class="row"><button class="btn small" type="button" data-action="sim-confluence" '+(busy?'disabled':'')+'>Simulate: agent finds a new Confluence page</button><span class="note-small">Stands in for the Confluence Agent noticing a requirements page. It proposes the milestone; the PM confirms.</span></div>'+
       ((S.remote&&S.remote.sections&&S.remote.sections.requirements&&S.remote.sections.requirements.content)?'<div class="decision"><h4 class="eyebrow">Requirements summary (written by the agents)</h4><p class="mono" style="white-space:pre-wrap;font-size:12px;margin:6px 0 0">'+esc(S.remote.sections.requirements.content)+'</p></div>':'')+
-      '<h4 class="eyebrow" style="margin-top:8px">Requirements docs</h4><div>'+((S.reqDocs&&S.reqDocs.length)?S.reqDocs.map(function(d){return '<div class="req"><span><b>'+esc(d.title)+'</b>'+(d.url?' &nbsp;<a href="'+esc(d.url)+'" target="_blank" rel="noopener">Open &#8599;</a>':'')+'<br><span class="note-small">Added by '+esc(d.by)+' on '+esc(fmtDay(d.date))+'</span></span></div>'}).join(''):'<p class="muted">No requirements doc added yet.</p>')+'</div>'+
+      '<h4 class="eyebrow" style="margin-top:8px">Requirements docs</h4><div>'+((S.reqDocs&&S.reqDocs.length)?S.reqDocs.map(function(d){return '<div class="req"><span><b>'+esc(d.title)+'</b>'+(d.url?' &nbsp;<a href="'+esc(d.url)+'" target="_blank" rel="noopener">Open &#8599;</a>':'')+'<br><span class="note-small">Added by '+esc(d.by)+' on '+esc(fmtDay(d.date))+'</span></span>'+((can.approve()||d.by===personaName())?'<button class="btn small crit" type="button" data-action="reqdoc-del" data-id="'+esc(d.id)+'">Delete</button>':'')+'</div>'}).join(''):'<p class="muted">No requirements doc added yet.</p>')+'</div>'+
       '<form data-form="reqdoc" class="stack" style="gap:10px"><h3>Add a requirements doc</h3><div class="grid2"><div class="field"><label for="rd-title">Doc title</label><input id="rd-title" required data-draft="rdTitle" value="'+esc(ui.drafts.rdTitle||'')+'" placeholder="Reporting Manager PRD v1"></div><div class="field"><label for="rd-url">Link (https)</label><input id="rd-url" type="url" data-draft="rdUrl" value="'+esc(ui.drafts.rdUrl||'')+'" placeholder="https://..."></div></div><div class="row"><button class="btn primary" type="submit" '+(busy?'disabled':'')+'>Add doc</button><span class="note-small">When the PM adds a doc, Pad status moves to Reqs draft done. When anyone else adds one, the orchestrator proposes it and the PM confirms.</span></div></form>'+
       '<div>'+S.requirements.map(function(r){return '<div class="req"><span><span class="mono">'+esc(r.id)+'</span> &nbsp;'+esc(r.text)+(r.from?'<br><span class="note-small">Added from '+esc(r.from)+'</span>':'')+'</span><span class="pill plain">'+(r.sync==='synced'?'Synced':'Write-back queued')+'</span></div>'}).join('')+'</div>';
     var cards=S.cards.filter(function(c){return c.audience===ui.fbTab});
@@ -707,7 +707,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
       '<form data-form="proto" class="stack" style="gap:10px"><h3>Prototype feedback</h3><div class="field"><label for="pf-body">Comment</label><textarea id="pf-body" required data-draft="pfBody" placeholder="What did you try, and what should change?">'+esc(ui.drafts.pfBody||'')+'</textarea></div><div class="row"><button class="btn primary" type="submit" '+(busy?'disabled':'')+'>Send feedback</button><span class="note-small">If the PM accepts it, they implement it.</span></div></form>';
     var allLog=S.log.concat(((S.remote&&S.remote.changelog)||[]).map(function(r){ return {kind:'applied',title:r.title||r.item_key,note:r.note||'',effects:String(r.effects||'').split('\n').filter(Boolean),at:r.at||''}; })).sort(function(a,b){return String(b.at)>String(a.at)?1:-1});
     var log=allLog.length? allLog.map(function(l){
-      return '<div class="log"><div class="log-head"><span class="pill plain">'+esc(({accept:'Accepted',reject:'Rejected',delay:'Delayed',reopen:'Reopened',created:'Created',lock:'Prototype',reqdone:'Milestone',invite:'Access',import:'Import',agents:'Agent run',applied:'Agents applied'})[l.kind]||l.kind)+'</span><b>'+esc(l.title)+'</b><span class="note-small mono">'+esc(fmtStamp(l.at))+'</span></div>'+(l.note?'<p class="muted" style="margin-top:4px">'+esc(l.note)+'</p>':'')+((l.effects&&l.effects.length)?'<p class="note-small" style="margin-top:4px">'+l.effects.map(esc).join(' · ')+'</p>':'')+'</div>';
+      return '<div class="log"><div class="log-head"><span class="pill plain">'+esc(({accept:'Accepted',reject:'Rejected',delay:'Delayed',reopen:'Reopened',created:'Created',lock:'Prototype',reqdone:'Milestone',invite:'Access',import:'Import',agents:'Agent run',applied:'Agents applied',deleted:'Deleted'})[l.kind]||l.kind)+'</span><b>'+esc(l.title)+'</b><span class="note-small mono">'+esc(fmtStamp(l.at))+'</span></div>'+(l.note?'<p class="muted" style="margin-top:4px">'+esc(l.note)+'</p>':'')+((l.effects&&l.effects.length)?'<p class="note-small" style="margin-top:4px">'+l.effects.map(esc).join(' · ')+'</p>':'')+'</div>';
     }).join('') : '<p class="muted">No changes yet.</p>';
     $('#sec-artifacts').innerHTML='<span class="eyebrow">Artifacts</span><h2>Everything behind this project</h2>'+
       artBox('sov','Statement of Value','why, goals, key clients',sov)+
@@ -937,6 +937,22 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
     else if(act==='goto-links'){ ui.open.prototype=true; renderArtifacts(); var t2=$('#art-prototype'); if(t2) t2.scrollIntoView({block:'center'}); }
     else if(act==='lock'&&can.control()){ S.protoLocked=!S.protoLocked; logEntry({kind:'lock',title:S.protoLocked?'Prototype locked for review':'Prototype unlocked',note:'',effects:[]}); save(); renderArtifacts(); if(ui.drawerOpen) renderDrawer(); }
     else if(act==='req-done'){ if(can.approve()&&!S.reqDone){ S.reqDone=true; var bb=S.progress; S.progress=Math.max(S.progress,50); logEntry({kind:'reqdone',title:'Requirements marked done',note:'',effects:['Progress '+bb+'% to '+S.progress+'%']}); save(); renderAll(); } }
+    else if(act==='reqdoc-del'){
+      var dd=(S.reqDocs||[]).find(function(x){return x.id===a.dataset.id}); if(!dd) return;
+      if(!(can.approve()||dd.by===personaName())){ toast('Only the PM or the person who added this doc can delete it.'); return; }
+      if(!window.confirm('Delete requirements doc "'+dd.title+'"? This cannot be undone.')) return;
+      S.reqDocs=S.reqDocs.filter(function(x){return x.id!==dd.id});
+      var fx3=[];
+      S.items=S.items.filter(function(mi){
+        if(mi.milestone==='reqs-draft'&&mi.title==='Requirements draft added: '+dd.title){
+          if(mi.status==='accepted'&&mi.undo){ if(mi.undo.dp){ S.progress=Math.max(0,S.progress-mi.undo.dp); fx3.push('Progress back to '+S.progress+'%'); } if(mi.undo.reqDraft){ S.reqDraft=false; fx3.push('Reqs draft done undone'); } }
+          fx3.push('Related milestone removed from the attention list'); return false;
+        }
+        return true;
+      });
+      logEntry({kind:'deleted',title:'Requirements doc deleted: '+dd.title,note:'Deleted by '+personaName()+'.',effects:fx3});
+      save(); renderAll(); toast('Doc deleted.');
+    }
     else if(act==='reset'){ if(can.approve()){ try{ localStorage.removeItem(KEY); }catch(x){} var keep=G.persona; G=seed(); G.persona=keep; S=G.projects[G.current]; ui.fresh={}; ui.drafts={}; ui.run=null; ui.expanded=null; renderAll(); toast('All sample data restored.'); } }
     else if(act==='n8n-clear'){ nsave({}); ui.nstatus='Disconnected.'; renderAll(); }
     else if(act==='n8n-sync'){ nSync(); }

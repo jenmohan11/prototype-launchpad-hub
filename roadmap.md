@@ -1,3 +1,4 @@
+- Delete requirements docs (PM or the person who added it; reverts status/progress and logs the deletion) — done; verified add+delete in preview
 - Server-side n8n proxy (no key in browser) — done
 - Keep Kickoff sync and all meeting notes inside a compact central repository — done; verified search, opening a note and reload
 - Import recent meeting sources into the repository and retain each specific Google Doc link — done; verified October 21 source, six excerpts, link, search and reload
