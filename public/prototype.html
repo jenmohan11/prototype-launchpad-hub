@@ -215,6 +215,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
 
 <script src="/meeting-notes.js"></script>
 <script src="/requirements-docs.js"></script>
+<script src="/prototype-feedback.js"></script>
 <script>
 (function(){
   var KEY='launchpad-proto-v3';
@@ -451,7 +452,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
     var c=ncfg(); ui.run={active:true,lines:[],mode:'n8n Orchestrator Agent (live)',title:inp.title};
     var push=function(t){ ui.run.lines.push({t:t,sim:false}); renderMonitor(); renderArtifacts(); };
     push('Sending "'+inp.title+'" to the Orchestrator Agent in n8n');
-    var body=new URLSearchParams({key:c.key||'',project_key:S.project.jira||'SCRUM',source:inp.source,title:inp.title,date:inp.date||'',by:inp.by||'',clients:inp.clients||'',text:inp.text||'',source_ref:inp.docUrl||(inp.cardId?('launchpad-card:'+inp.cardId):''),source_link:inp.docUrl||'',item_type:inp.type||''});
+    var body=new URLSearchParams({key:c.key||'',project_key:S.project.jira||'SCRUM',source:inp.source,title:inp.title,date:inp.date||'',by:inp.by||'',clients:inp.clients||'',text:inp.text||'',source_ref:inp.source==='Prototype Feedback'&&inp.cardId?'launchpad-card:'+inp.cardId:(inp.docUrl||(inp.cardId?('launchpad-card:'+inp.cardId):'')),source_link:inp.docUrl||'',item_type:inp.type||''});
     try{ await nfetch(nep('submit'),{method:'POST',body:body}); }
     catch(e){ push('Could not send it. '+nerr(e)); endRun(); ui.run.active=false; save(); renderAll(); return []; }
     push('n8n accepted it. The Orchestrator is reading it and checking Jira and Slack (read-only). This can take a minute.');
@@ -663,7 +664,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
     var own=editable&&(c.owner||'business')===G.persona;
     var edit=own&&canEditCard(c)?'<button class="btn small" type="button" data-action="edit-card" data-id="'+esc(c.id)+'">Edit</button>':'';
     var locked=own&&!canEditCard(c)?'<p class="note-small" style="margin-top:4px">Locked after the PM decided. Add a new card to follow up.</p>':'';
-    return '<div class="log"><div class="row" style="justify-content:space-between"><b>'+esc(c.by)+'</b><span class="row"><span class="note-small mono">'+fmtDay(c.date)+(c.edited?' · edited':'')+'</span>'+st+edit+'</span></div><p style="margin-top:2px">'+esc(c.body)+'</p>'+(c.clients?'<p class="note-small" style="margin-top:2px">Clients: '+esc(c.clients)+'</p>':'')+loom+files+locked+'</div>';
+    return '<div class="log"><div class="row" style="justify-content:space-between"><b>'+esc(c.by)+'</b><span class="row">'+(c.source==='Prototype Feedback'?'<span class="pill comment">Prototype comment</span>':'')+'<span class="note-small mono">'+fmtDay(c.date)+(c.edited?' · edited':'')+'</span>'+st+edit+'</span></div><p style="margin-top:2px">'+esc(c.body)+'</p>'+(c.clients?'<p class="note-small" style="margin-top:2px">Clients: '+esc(c.clients)+'</p>':'')+loom+files+locked+'</div>';
   }
   function linkChip(label,url){
     if(url&&/^https:\/\//.test(url)) return '<a class="btn primary" href="'+esc(url)+'" target="_blank" rel="noopener">Open '+esc(label)+' &#8599;</a>';
@@ -685,7 +686,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
       '<h4 class="eyebrow" style="margin-top:8px">Requirements docs</h4><div>'+((S.reqDocs&&S.reqDocs.length)?S.reqDocs.map(function(d){return '<div class="req"><span><b>'+esc(d.title)+'</b>'+(d.url?' &nbsp;<a href="'+esc(d.url)+'" target="_blank" rel="noopener">Open &#8599;</a>':'')+'<br><span class="note-small">Added by '+esc(d.by)+' on '+esc(fmtDay(d.date))+'</span></span>'+((can.approve()||d.by===personaName())?'<button class="btn small crit" type="button" data-action="reqdoc-del" data-id="'+esc(d.id)+'">Delete</button>':'')+'</div>'}).join(''):'<p class="muted">No requirements doc added yet.</p>')+'</div>'+
       (ReqDocs.canAddReqDoc(S.reqDocs)?'<form data-form="reqdoc" class="stack" style="gap:10px"><h3>Add a requirements doc</h3><div class="grid2"><div class="field"><label for="rd-title">Doc title</label><input id="rd-title" required data-draft="rdTitle" value="'+esc(ui.drafts.rdTitle||'')+'" placeholder="Reporting Manager PRD v1"></div><div class="field"><label for="rd-url">Link (https)</label><input id="rd-url" type="url" data-draft="rdUrl" value="'+esc(ui.drafts.rdUrl||'')+'" placeholder="https://..."></div></div><div class="row"><button class="btn primary" type="submit" '+(busy?'disabled':'')+'>Add doc</button><span class="note-small">One master doc only. When the PM adds a doc, Pad status moves to Reqs draft done. When anyone else adds one, the orchestrator proposes it and the PM confirms.</span></div></form>':'<p class="note-small" style="margin-top:8px">One master requirements doc is allowed. A doc is already linked — delete it above to add a different one.</p>')+
       '<div>'+S.requirements.map(function(r){return '<div class="req"><span><span class="mono">'+esc(r.id)+'</span> &nbsp;'+esc(r.text)+(r.from?'<br><span class="note-small">Added from '+esc(r.from)+'</span>':'')+'</span><span class="pill plain">'+(r.sync==='synced'?'Synced':'Write-back queued')+'</span></div>'}).join('')+'</div>';
-    var cards=S.cards.filter(function(c){return c.audience===ui.fbTab});
+    var cards=S.cards.concat(S.protoComments.map(function(c){return Object.assign({},c,{source:'Prototype Feedback',audience:c.audience||'internal'});})).filter(function(c){return c.audience===ui.fbTab});
     var fb=
       '<div class="tabs" role="tablist" style="margin-top:0">'+[['internal','Internal'],['client','Clients']].map(function(t){return '<button role="tab" type="button" data-action="fbtab" data-v="'+t[0]+'" aria-selected="'+(ui.fbTab===t[0])+'">'+t[1]+'</button>'}).join('')+'</div>'+
       '<div>'+(cards.length?cards.map(function(c){return cardHtml(c,true)}).join(''):'<p class="muted">No cards in this tab yet.</p>')+'</div>';
@@ -713,7 +714,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
     $('#sec-artifacts').innerHTML='<span class="eyebrow">Artifacts</span><h2>Everything behind this project</h2>'+
       artBox('sov','Statement of Value','why, goals, key clients',sov)+
       artBox('req','Requirements','connected to Confluence · '+S.requirements.length,reqs)+
-      artBox('feedback','Stakeholder Feedback','internal and clients · '+S.cards.length,fb)+
+      artBox('feedback','Stakeholder Feedback','internal and clients · '+(S.cards.length+S.protoComments.length),fb)+
       artBox('meetings','Meeting Notes Repository','notes and recordings · '+plural(S.notes.length,'note'),notes)+
       artBox('prototype','Prototype and Design','Claude and Miro',proto)+
       artBox('log','Change Log','every decision · '+allLog.length,log);
@@ -1038,9 +1039,10 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
       var ol=S.links||{}; S.designAdds=S.designAdds||[]; var today=new Date().toISOString().slice(0,10); if(lp&&lp!==ol.prototype) S.designAdds.unshift({what:'prototype link',at:today}); if(lm&&lm!==ol.miro) S.designAdds.unshift({what:'Miro design board',at:today}); S.links={prototype:lp,miro:lm}; renderMonitor(); delete D.lkProto; delete D.lkMiro; save(); renderProject(); renderArtifacts(); toast('Links saved.');
     } else if(kind==='proto'){
       if(!D.pfBody||!D.pfBody.trim()) return;
-      var pb=D.pfBody.trim(); S.protoComments.unshift({id:'p'+Date.now(),by:personaName(),date:'2026-10-16',clients:'',body:pb}); D.pfBody='';
+      var pb=D.pfBody.trim(), pc={id:'p'+Date.now(),by:personaName(),date:new Date().toISOString().slice(0,10),clients:'',body:pb,source:'Prototype Feedback',audience:'internal'}; S.protoComments.unshift(pc); D.pfBody='';
+      logEntry({kind:'created',title:'Stakeholder feedback: Prototype comment',note:pb,effects:[]}); save();
       renderArtifacts();
-      await runAgent({source:'Prototype Feedback',title:pb.slice(0,60),date:'2026-10-16',by:personaName(),text:pb,type:'comment'}); scrollToMonitor();
+      await runAgent({source:'Prototype Feedback',title:pb.slice(0,60),date:pc.date,by:pc.by,text:pb,type:'comment',cardId:pc.id,docUrl:(S.links||{}).prototype||''}); scrollToMonitor();
     }
   });
   function importRows(rowsIn,label,quiet){
@@ -1054,7 +1056,8 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
     rows.forEach(function(r,idx){
       if(!r||typeof r!=='object') return;
       var key=String(r.item_key||r.key||('n8n-'+Date.now()+'-'+idx));
-      if(S.items.some(function(i){return i.key===key})) return;
+      var existing=S.items.find(function(i){return i.key===key});
+      if(existing){ if(PrototypeFeedback.normalize(existing,S.protoComments,S.links)) notesChanged=true; return; }
       var pts=list(r.key_points);
       var src=String(r.source||'Meeting Notes'); var st=['pending','accepted','rejected','delayed'].indexOf(r.status)>-1?r.status:'pending';
       S.items.unshift({key:key,project_key:r.project_key||'SCRUM',title:String(r.title||key),source:src,by:r.submitted_by||'n8n',date:String(r.source_date||'').slice(0,10)||'2026-10-16',
@@ -1064,7 +1067,8 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
         change:r.proposed_change?String(r.proposed_change):'Review and decide.',impact:r.impact?String(r.impact):'Not assessed.',reason:r.attention_reason?String(r.attention_reason):'',link:r.source_link?String(r.source_link):'',sourceRef:r.source_ref?String(r.source_ref):'',clients:'',cardId:((String(r.source_ref||'').match(/launchpad-card:([^;\s]+)/)||[])[1]||undefined),status:st,created:new Date().toISOString()});
       ui.fresh[key]=true; n++;
     });
-    if(notesChanged){ save(); renderArtifacts(); }
+    if(PrototypeFeedback.sync(S.items,S.protoComments,S.links)) notesChanged=true;
+    if(notesChanged){ save(); renderArtifacts(); renderMonitor(); }
     if(n){ logEntry({kind:'import',title:(label==='n8n sync'?'Synced ':'Imported ')+plural(n,'item')+' from the n8n Action Items table',note:'',effects:[]}); ui.drafts.import=''; ui.importOpen=false; save(); renderAll(); if(quiet!=='silent') toast(plural(n,'item')+' added to the queue.'); }
     else if(quiet!=='silent'&&!quiet) toast('No new rows found. Every row is added, even when some fields are empty; only exact duplicates are skipped.');
     else if(quiet!=='silent') toast('Already up to date. No new pending items in n8n.');
@@ -1072,6 +1076,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
   }
 
   if(MeetingNotes.importSources(S.notes,S.items)) save();
+  Object.keys(G.projects).forEach(function(k){var p=G.projects[k]; if(PrototypeFeedback.sync(p.items,p.protoComments,p.links)) save();});
   renderAll();
   if(nconnected()) nSync();
 })();

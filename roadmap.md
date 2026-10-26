@@ -6,3 +6,4 @@
 - Older notes without a Google Doc link — waiting on the original document links; each entry now supports adding its link
 - Attention list rank, comment labels, design files in summary, feedback-card form removed, control panel to Settings — done
 - Sprint name/dates from Jira agent — page ready; waiting on n8n workflow to send sprint fields
+- Correct prototype comment attribution, remove unrelated SCRUM-16 details, and record prototype comments in Stakeholder Feedback — done; eight tests passed and browser verified labels, submission source/ID, stakeholder records and reload persistence with mocked n8n responses
