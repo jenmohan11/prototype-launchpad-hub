@@ -10,43 +10,43 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ApiN8nSplatRouteImport } from './routes/api/n8n.$'
+import { Route as ApiPublicN8nSplatRouteImport } from './routes/api/public/n8n.$'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiN8nSplatRoute = ApiN8nSplatRouteImport.update({
-  id: '/api/n8n/$',
-  path: '/api/n8n/$',
+const ApiPublicN8nSplatRoute = ApiPublicN8nSplatRouteImport.update({
+  id: '/api/public/n8n/$',
+  path: '/api/public/n8n/$',
   getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/api/n8n/$': typeof ApiN8nSplatRoute
+  '/api/public/n8n/$': typeof ApiPublicN8nSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/api/n8n/$': typeof ApiN8nSplatRoute
+  '/api/public/n8n/$': typeof ApiPublicN8nSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/api/n8n/$': typeof ApiN8nSplatRoute
+  '/api/public/n8n/$': typeof ApiPublicN8nSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/n8n/$'
+  fullPaths: '/' | '/api/public/n8n/$'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/n8n/$'
-  id: '__root__' | '/' | '/api/n8n/$'
+  to: '/' | '/api/public/n8n/$'
+  id: '__root__' | '/' | '/api/public/n8n/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  ApiN8nSplatRoute: typeof ApiN8nSplatRoute
+  ApiPublicN8nSplatRoute: typeof ApiPublicN8nSplatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -58,11 +58,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/n8n/$': {
-      id: '/api/n8n/$'
-      path: '/api/n8n/$'
-      fullPath: '/api/n8n/$'
-      preLoaderRoute: typeof ApiN8nSplatRouteImport
+    '/api/public/n8n/$': {
+      id: '/api/public/n8n/$'
+      path: '/api/public/n8n/$'
+      fullPath: '/api/public/n8n/$'
+      preLoaderRoute: typeof ApiPublicN8nSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -70,7 +70,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  ApiN8nSplatRoute: ApiN8nSplatRoute,
+  ApiPublicN8nSplatRoute: ApiPublicN8nSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

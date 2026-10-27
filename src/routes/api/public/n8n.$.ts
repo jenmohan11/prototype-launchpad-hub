@@ -2,6 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 
 // Same-origin proxy to the n8n webhooks. The n8n base URL and access key live
 // only in server env (N8N_BASE_URL, N8N_ACCESS_KEY) and are never sent to the browser.
+// Lives under /api/public/ because the prototype page is public (no login): hosted
+// deployments require authentication for other /api/ routes, which blocked these calls.
+// The allowlist below is the only exposure; the n8n key is injected server-side.
 const ALLOWED: Record<string, "GET" | "POST"> = {
   "launchpad-items": "GET",
   "launchpad-state": "GET",
@@ -52,7 +55,7 @@ async function forward(request: Request, name: string, method: "GET" | "POST") {
   }
 }
 
-export const Route = createFileRoute("/api/n8n/$")({
+export const Route = createFileRoute("/api/public/n8n/$")({
   server: {
     handlers: {
       GET: ({ request, params }) => forward(request, params._splat || "", "GET"),
