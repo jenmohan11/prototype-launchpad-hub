@@ -415,7 +415,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
     var payload={event:event,card_id:card.id,project_key:S.project.jira||'SCRUM',title:(card.body||'').split('\n')[0].slice(0,80),
       submitter_name:card.name||card.by||personaName(),submitter_email:card.email||'',audience:card.audience||'internal',
       feedback:card.body||'',card_link:card.loom||'',submitted_at:new Date().toISOString()};
-    try{ var j=await nfetch('/api/n8n/feedback-card',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
+    try{ var j=await nfetch('/api/public/n8n/feedback-card',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
       if(j&&j.received) toast('Feedback card sent to n8n. Refreshing the list in 20 seconds.');
       setTimeout(function(){ nSync(); },20000);
     }catch(e){ toast('Card saved, but sending it to n8n failed: '+nerr(e)); }
