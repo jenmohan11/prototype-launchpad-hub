@@ -243,6 +243,14 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
     var label=o.label||(o.name?(o.name+(o.start&&o.end?' · '+fmtSprintDay(o.start)+' to '+fmtSprintDay(o.end,true):'')):'');
     if(!label||label===S.project.sprint) return false; S.project.sprint=label; save(); renderProject(); console.log('[n8n] sprint updated from Jira agent:',label); return true;
   }
+  function applySections(j){
+    if(!j||typeof j!=='object'||!Array.isArray(j.sections)) return false;
+    var m=Object.assign({},(S.remote&&S.remote.sections)||{}), changed=false;
+    j.sections.forEach(function(x){ if(x&&x.section){ var k=String(x.section).toLowerCase().replace(/\s+/g,'_'); if(JSON.stringify(m[k])!==JSON.stringify(x)){ m[k]=x; changed=true; } } });
+    if(!changed) return false;
+    S.remote=Object.assign({},S.remote,{sections:m,fetched:new Date().toISOString()});
+    save(); console.log('[n8n] sections updated from agents:',Object.keys(m).join(', ')); return true;
+  }
   var PRIO_ORDER={high:0,medium:1,low:2};
   var SECTIONS=['Summary','Next Steps','Requirements','Statement of Value','Stakeholder Feedback','Risks & Blockers','Timeline','Jira','Slack'];
   var PERSONAS={admin:'Admin (PM)',dev:'Dev',business:'Business'};
@@ -416,7 +424,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
     var c=ncfg(); if(!nconnected()) return;
     ui.nbusy=true; renderMonitor();
     try{ var j=await nfetch(nurl(nep('items'),{project_key:S.project.jira||'SCRUM',key:c.key}));
-      applySprint(j); var rows=Array.isArray(j)?j:(j.items||j.data||j.rows||[]); console.log('[n8n] rendering',rows.length,'item(s)'); ui.nNeedKey=false; ui.tab='pending'; ui.filter='all'; importRows(rows,'n8n sync',true); await nState(true); ui.nstatus='Synced '+new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})+'. '+rows.length+' pending row'+(rows.length===1?'':'s')+' in n8n.';
+      applySprint(j); applySections(j); var rows=Array.isArray(j)?j:(j.items||j.data||j.rows||[]); console.log('[n8n] rendering',rows.length,'item(s)'); ui.nNeedKey=false; ui.tab='pending'; ui.filter='all'; importRows(rows,'n8n sync',true); await nState(true); ui.nstatus='Synced '+new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})+'. '+rows.length+' pending row'+(rows.length===1?'':'s')+' in n8n.';
     }catch(e){ ui.nstatus=nerr(e); toast(nerr(e)); }
     ui.nbusy=false; renderMonitor(); if(ui.drawerOpen) renderDrawer();
   }
@@ -437,9 +445,10 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
   async function nState(silent){
     if(!nconnected()) return false; var c=ncfg();
     try{ var j=await nfetch(nurl(nep('state'),{project_key:S.project.jira||'SCRUM',key:c.key}));
-      applySprint(j); var m={}; (j.sections||[]).forEach(function(x){ if(x&&x.section) m[String(x.section).toLowerCase().replace(/\s+/g,'_')]=x; });
-      var prev=JSON.stringify(S.remote||{}); S.remote={sections:m,changelog:(j.changelog||[]).slice(0,30),fetched:new Date().toISOString()};
-      save(); renderAll(); return JSON.stringify(S.remote.sections)+JSON.stringify(S.remote.changelog)!==prev;
+      applySprint(j); var prev=JSON.stringify(S.remote||{});
+      S.remote=Object.assign({},S.remote,{changelog:(j.changelog||[]).slice(0,30)});
+      applySections(j);
+      save(); renderAll(); return JSON.stringify(S.remote)!==prev;
     }catch(e){ if(!silent){ ui.nstatus=nerr(e); toast(nerr(e)); } return false; }
   }
   async function nStatePoll(){
@@ -675,7 +684,11 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
   function renderArtifacts(){
     var busy=!!(ui.run&&ui.run.active);
     var sv=S.sov||{why:'',goal:'',clients:[],goals:[]};
-    var sov=
+    var sovAgent=S.remote&&S.remote.sections&&S.remote.sections.statement_of_value;
+    var sov=(sovAgent&&sovAgent.content)?
+      '<p class="note-small mono">Written by the orchestrator agent in n8n, using the quarterly goals. Updated '+esc(fmtDay(sovAgent.updated||((S.remote||{}).fetched)||''))+'.</p>'+
+      '<p style="white-space:pre-wrap">'+esc(sovAgent.content)+'</p>'
+    :
       '<div><h4 class="eyebrow">Why</h4><p>'+esc(sv.why)+'</p></div>'+
       '<div><h4 class="eyebrow">Sprint goal</h4><p>'+esc(sv.goal)+'</p></div>'+
       '<div class="grid2"><div><h4 class="eyebrow">Key clients</h4><div class="row" style="margin-top:4px">'+sv.clients.map(function(c){return '<span class="chip">'+esc(c)+'</span>'}).join('')+'</div></div><div><h4 class="eyebrow">Key goals</h4><ul class="plain">'+sv.goals.map(function(g){return '<li>'+esc(g)+'</li>'}).join('')+'</ul></div></div>';
