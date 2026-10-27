@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiN8nSplatRouteImport } from './routes/api/n8n.$'
+import { Route as ApiPublicN8nSplatRouteImport } from './routes/api/public/n8n.$'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -22,31 +23,40 @@ const ApiN8nSplatRoute = ApiN8nSplatRouteImport.update({
   path: '/api/n8n/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicN8nSplatRoute = ApiPublicN8nSplatRouteImport.update({
+  id: '/api/public/n8n/$',
+  path: '/api/public/n8n/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/api/n8n/$': typeof ApiN8nSplatRoute
+  '/api/public/n8n/$': typeof ApiPublicN8nSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/api/n8n/$': typeof ApiN8nSplatRoute
+  '/api/public/n8n/$': typeof ApiPublicN8nSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/api/n8n/$': typeof ApiN8nSplatRoute
+  '/api/public/n8n/$': typeof ApiPublicN8nSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/n8n/$'
+  fullPaths: '/' | '/api/n8n/$' | '/api/public/n8n/$'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/n8n/$'
-  id: '__root__' | '/' | '/api/n8n/$'
+  to: '/' | '/api/n8n/$' | '/api/public/n8n/$'
+  id: '__root__' | '/' | '/api/n8n/$' | '/api/public/n8n/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ApiN8nSplatRoute: typeof ApiN8nSplatRoute
+  ApiPublicN8nSplatRoute: typeof ApiPublicN8nSplatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -65,12 +75,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiN8nSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/n8n/$': {
+      id: '/api/public/n8n/$'
+      path: '/api/public/n8n/$'
+      fullPath: '/api/public/n8n/$'
+      preLoaderRoute: typeof ApiPublicN8nSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ApiN8nSplatRoute: ApiN8nSplatRoute,
+  ApiPublicN8nSplatRoute: ApiPublicN8nSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
