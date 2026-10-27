@@ -5,5 +5,7 @@
 - Import recent meeting sources into the repository and retain each specific Google Doc link — done; verified October 21 source, six excerpts, link, search and reload
 - Older notes without a Google Doc link — waiting on the original document links; each entry now supports adding its link
 - Attention list rank, comment labels, design files in summary, feedback-card form removed, control panel to Settings — done
-- Sprint name/dates from Jira agent — page ready; waiting on n8n workflow to send sprint fields
+- Sprint name/dates from Jira agent — done; n8n now sends them and the page shows SCRUM Sprint 1 · Oct 21 to Nov 2, 2026
+- n8n connection test reaching the wrong address (401 before n8n saw the key) — done; proxy moved to /api/public/n8n and verified against live n8n
+- Republish the live link (prototype-launchpad-hub.lovable.app) so it matches the preview — waiting on user approval to publish
 - Correct prototype comment attribution, remove unrelated SCRUM-16 details, and record prototype comments in Stakeholder Feedback — done; eight tests passed and browser verified labels, submission source/ID, stakeholder records and reload persistence with mocked n8n responses
