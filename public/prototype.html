@@ -391,7 +391,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
   var NKEY='launchpad-n8n-cfg';
     /* n8n address and key live on the server; the page talks to the same-origin proxy only. */
   try{ localStorage.removeItem(NKEY); }catch(e){}
-  function ncfg(){ return {base:'/api/n8n',key:''}; }
+  function ncfg(){ return {base:'/api/public/n8n',key:''}; }
   function nsave(c){}
   function nconnected(){ return !!ncfg().base; }
   function nep(name){ return String(ncfg().base||'').replace(/\/+$/,'')+'/launchpad-'+name; }
