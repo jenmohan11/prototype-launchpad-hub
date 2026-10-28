@@ -30,3 +30,17 @@ describe('Requirements docs: one master doc', () => {
     expect(api.dedupe([])).toEqual([]);
   });
 });
+
+describe('Requirements: deferred items leave the requirements list', () => {
+  const reqs = [
+    { id: 'R-9', text: 'CSV and PDF export for reports', from: 'x' },
+    { id: 'R-10', text: 'Requirements: add new post-beta requirement "Slack delivery for scheduled reports (needs Slack app)"', from: 'scrum-meeting-slack-delivery-requirement-20261021' },
+  ];
+  it('removes the Slack requirement when Slack is pushed to phase 2', () => {
+    const item = { key: 'k1', title: 'Push Slack delivery to phase 2 or later', change: 'Defer Slack integration' };
+    expect(api.deferredMatches(item, reqs).map((r: any) => r.id)).toEqual(['R-10']);
+  });
+  it('removes nothing for an item that is not a deferral', () => {
+    expect(api.deferredMatches({ key: 'k2', title: 'Add Slack delivery', change: 'Add it' }, reqs)).toEqual([]);
+  });
+});
