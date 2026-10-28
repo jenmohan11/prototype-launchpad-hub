@@ -1089,7 +1089,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
   }
 
   if(MeetingNotes.importSources(S.notes,S.items)) save();
-  Object.keys(G.projects).forEach(function(k){var p=G.projects[k]; if(PrototypeFeedback.sync(p.items,p.protoComments,p.links)) save();});
+  Object.keys(G.projects).forEach(function(k){var p=G.projects[k]; if(PrototypeFeedback.sync(p.items,p.protoComments,p.links)) save(); var before=(p.reqDocs||[]).length; p.reqDocs=ReqDocs.dedupe(p.reqDocs); if(p.reqDocs.length!==before) save();});
   renderAll();
   if(nconnected()) nSync();
 })();
