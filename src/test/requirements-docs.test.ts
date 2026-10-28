@@ -44,3 +44,13 @@ describe('Requirements: deferred items leave the requirements list', () => {
     expect(api.deferredMatches({ key: 'k2', title: 'Add Slack delivery', change: 'Add it' }, reqs)).toEqual([]);
   });
 });
+
+describe('Deleted R13 Slack delivery requirement', () => {
+  const text = 'Scheduled reports can be delivered to Slack (needs Slack app and per-workspace authorization; ~2-3 week estimate) (P2, Phase 2 or later)';
+  it('removes the specified R13 line without removing other requirements', () => {
+    expect(api.removeDeletedSlackLine('R12 Email delivery\nR13 ' + text + '\nR14 Report exports')).toBe('R12 Email delivery\nR14 Report exports');
+    expect(api.isDeletedSlackRequirement('R-13', text)).toBe(true);
+    expect(api.isDeletedSlackRequirement('R14', text)).toBe(false);
+    expect(api.isDeletedSlackRequirement('R13', 'Slack delivery audit logging')).toBe(false);
+  });
+});
