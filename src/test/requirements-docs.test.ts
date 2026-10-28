@@ -19,4 +19,14 @@ describe('Requirements docs: one master doc', () => {
     docs.pop();
     expect(api.canAddReqDoc(docs)).toBe(true);
   });
+
+  it('dedupes saved state down to one master doc', () => {
+    expect(api.dedupe(undefined)).toEqual([]);
+    expect(api.dedupe([
+      { id: 'd1', title: 'Reporting Manager requirements (Confluence page)' },
+      { id: 'd2', title: 'Reporting Manager requirements (Confluence page)' },
+      { id: 'd3', title: 'A different doc' },
+    ])).toEqual([{ id: 'd1', title: 'Reporting Manager requirements (Confluence page)' }]);
+    expect(api.dedupe([])).toEqual([]);
+  });
 });
