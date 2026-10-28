@@ -480,7 +480,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
   }
   async function nDecision(it,status){
     if(!nconnected()) return; var c=ncfg();
-    var body=new URLSearchParams({key:c.key||'',project_key:it.project_key||S.project.jira||'SCRUM',item_key:it.key,status:status,decision_notes:it.decision_notes||'',decided_by:it.decided_by||'',decided_at:it.decided_at||''});
+    var body=new URLSearchParams({key:c.key||'',project_key:it.project_key||S.project.jira||'SCRUM',item_key:it.key,status:status,decision_notes:it.decision_notes||'',decided_by:it.decided_by||'',decided_at:it.decided_at||''}); if(status==='accepted'&&it.removed_requirements&&it.removed_requirements.length){ body.set('requirements_removed',JSON.stringify(it.removed_requirements.map(function(q){return {id:q.id,text:q.text}}))); body.set('confluence_action','remove_requirements'); }
     it.n8n='sending'; renderMonitor();
     try{ var j=await nfetch(nep('decision'),{method:'POST',body:body}); it.n8n=(j&&j.ok===false)?'missing':'ok'; if(it.n8n==='ok'&&status==='accepted') nStatePoll(); }
     catch(e){ it.n8n='failed'; it.n8nErr=nerr(e); }
@@ -782,6 +782,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
       if(S.progress<cap){ var b=S.progress; S.progress=Math.min(cap,S.progress+5); it.undo=it.undo||{}; it.undo.dp=S.progress-b; fx.push('Progress '+b+'% to '+S.progress+'%'); }
       if(!S.reqDraft&&/requirement/i.test((it.title||'')+' '+(it.source||'')+' '+(it.change||''))&&/draft|doc|page|live|publish|ready|complete/i.test((it.title||'')+' '+(it.change||''))){ S.reqDraft=true; it.undo=it.undo||{}; it.undo.reqDraft=true; fx.push('Pad status: Reqs draft live','Summary regenerated'); }
       if(it.affected.indexOf('Requirements')>-1){ S.requirements.push({id:'R-'+(S.requirements.length+1),text:it.change,from:it.key,sync:'queued'}); it.undo=it.undo||{}; it.undo.req=true; fx.push('Requirement added, Confluence write-back queued'); }
+      var gone=ReqDocs.deferredMatches(it,S.requirements); if(gone.length){ S.requirements=S.requirements.filter(function(q){return gone.indexOf(q)===-1}); it.undo=it.undo||{}; it.undo.removedReqs=gone; it.removed_requirements=gone; fx.push('Removed '+gone.map(function(q){return q.id}).join(', ')+' from requirements (moved to a later phase), Confluence update sent'); }
       if(it.affected.indexOf('Jira')>-1) fx.push('Jira update queued');
       if(it.affected.indexOf('Timeline')>-1) fx.push('Timeline update queued');
       if(it.affected.indexOf('Stakeholder Feedback')>-1) fx.push('Feedback card marked reviewed');
@@ -944,7 +945,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
     }
     else if(act==='art'){ ui.open[a.dataset.id]=!ui.open[a.dataset.id]; renderArtifacts(); }
     else if(act==='fbtab'){ ui.fbTab=v; renderArtifacts(); }
-    else if(act==='reopen'){ var r=S.items.find(function(i){return i.key===key}); if(r&&can.approve()){ var was=r.status, fx2=[]; if(was==='accepted'&&r.undo){ if(r.undo.dp){ S.progress=Math.max(0,S.progress-r.undo.dp); fx2.push('Progress back to '+S.progress+'%'); } if(r.undo.reqDraft){ S.reqDraft=false; fx2.push('Reqs draft done undone'); } if(r.undo.req){ S.requirements=S.requirements.filter(function(q){return q.from!==r.key}); fx2.push('Requirement removed'); } } delete r.undo; r.status='pending'; delete r.decision_notes; delete r.decided_by; delete r.decided_at; if(nconnected()) nDecision(r,'pending'); logEntry({kind:'reopen',title:r.title,note:(was==='delayed'?'Moved back to needs attention.':'Decision changed: was '+was+', moved back for a new decision.'),effects:fx2}); ui.tab='pending'; ui.expanded=r.key; save(); renderAll(); } }
+    else if(act==='reopen'){ var r=S.items.find(function(i){return i.key===key}); if(r&&can.approve()){ var was=r.status, fx2=[]; if(was==='accepted'&&r.undo){ if(r.undo.dp){ S.progress=Math.max(0,S.progress-r.undo.dp); fx2.push('Progress back to '+S.progress+'%'); } if(r.undo.reqDraft){ S.reqDraft=false; fx2.push('Reqs draft done undone'); } if(r.undo.req){ S.requirements=S.requirements.filter(function(q){return q.from!==r.key}); fx2.push('Requirement removed'); } if(r.undo.removedReqs){ S.requirements=S.requirements.concat(r.undo.removedReqs); delete r.removed_requirements; fx2.push('Requirement restored'); } } delete r.undo; r.status='pending'; delete r.decision_notes; delete r.decided_by; delete r.decided_at; if(nconnected()) nDecision(r,'pending'); logEntry({kind:'reopen',title:r.title,note:(was==='delayed'?'Moved back to needs attention.':'Decision changed: was '+was+', moved back for a new decision.'),effects:fx2}); ui.tab='pending'; ui.expanded=r.key; save(); renderAll(); } }
     else if(act==='sample-note'){ ui.drafts.mnTitle=SAMPLE_NOTE.title; ui.drafts.mnDate=SAMPLE_NOTE.date; ui.drafts.mnText=SAMPLE_NOTE.text; renderArtifacts(); }
     else if(act==='sim-confluence'){ if(ui.run&&ui.run.active) return; if(!ReqDocs.canAddReqDoc(S.reqDocs)){ toast('A requirements doc is already linked. Delete it before adding another.'); return; } var cd={id:'d'+Date.now(),title:'Reporting Manager requirements (Confluence page)',url:'',by:'Confluence Agent',date:'2026-10-19'}; S.reqDocs=S.reqDocs||[]; S.reqDocs.unshift(cd); ui.open.req=true; save(); renderArtifacts(); proposeReqMilestone(cd,true).then(scrollToMonitor); }
     else if(act==='goto-links'){ ui.open.prototype=true; renderArtifacts(); var t2=$('#art-prototype'); if(t2) t2.scrollIntoView({block:'center'}); }
@@ -1088,6 +1089,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
 
   if(MeetingNotes.importSources(S.notes,S.items)) save();
   Object.keys(G.projects).forEach(function(k){var p=G.projects[k]; if(PrototypeFeedback.sync(p.items,p.protoComments,p.links)) save(); var before=(p.reqDocs||[]).length; p.reqDocs=ReqDocs.dedupe(p.reqDocs); if(p.reqDocs.length!==before) save();});
+  (S.items||[]).forEach(function(it){ if(it.status!=='accepted') return; var gone=ReqDocs.deferredMatches(it,S.requirements); if(!gone.length) return; S.requirements=S.requirements.filter(function(q){return gone.indexOf(q)===-1}); it.undo=it.undo||{}; it.undo.removedReqs=gone; it.removed_requirements=gone; logEntry({kind:'accept',title:it.title,note:'Applied the earlier decision to Requirements.',effects:['Removed '+gone.map(function(q){return q.id}).join(', ')+' (moved to a later phase)','Confluence update sent']}); save(); if(nconnected()) nDecision(it,'accepted'); });
   renderAll();
   if(nconnected()) nSync();
 })();
