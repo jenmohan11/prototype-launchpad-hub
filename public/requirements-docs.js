@@ -41,5 +41,14 @@
       return words(r.text).some(function (w) { return topic[w]; });
     });
   }
-  global.ReqDocs = { canAddReqDoc: canAddReqDoc, dedupe: dedupe, isDeferral: isDeferral, deferredMatches: deferredMatches };
+  function isDeletedSlackRequirement(id, text) {
+    return /^R-?13$/i.test(String(id || '').trim()) && /^Scheduled reports can be delivered to Slack \(needs Slack app and per-workspace authorization; ~2-3 week estimate\) \(P2, Phase 2 or later\)\s*$/i.test(String(text || '').trim());
+  }
+  function removeDeletedSlackLine(content) {
+    return String(content || '').split('\n').filter(function (line) {
+      var match = line.match(/^\s*(?:[-*]\s*)?(R-?13)\s+(.+)$/i);
+      return !match || !isDeletedSlackRequirement(match[1], match[2]);
+    }).join('\n');
+  }
+  global.ReqDocs = { canAddReqDoc: canAddReqDoc, dedupe: dedupe, isDeferral: isDeferral, deferredMatches: deferredMatches, isDeletedSlackRequirement: isDeletedSlackRequirement, removeDeletedSlackLine: removeDeletedSlackLine };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -246,7 +246,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
   function applySections(j){
     if(!j||typeof j!=='object'||!Array.isArray(j.sections)) return false;
     var m=Object.assign({},(S.remote&&S.remote.sections)||{}), changed=false;
-    j.sections.forEach(function(x){ if(x&&x.section){ var k=String(x.section).toLowerCase().replace(/\s+/g,'_'); if(JSON.stringify(m[k])!==JSON.stringify(x)){ m[k]=x; changed=true; } } });
+    j.sections.forEach(function(x){ if(x&&x.section){ var k=String(x.section).toLowerCase().replace(/\s+/g,'_'); if(k==='requirements'&&x.content) x=Object.assign({},x,{content:ReqDocs.removeDeletedSlackLine(x.content)}); if(JSON.stringify(m[k])!==JSON.stringify(x)){ m[k]=x; changed=true; } } });
     if(!changed) return false;
     S.remote=Object.assign({},S.remote,{sections:m,fetched:new Date().toISOString()});
     save(); console.log('[n8n] sections updated from agents:',Object.keys(m).join(', ')); return true;
@@ -1088,6 +1088,8 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
   }
 
   if(MeetingNotes.importSources(S.notes,S.items)) save();
+  Object.keys(G.projects).forEach(function(k){var p=G.projects[k]; p.requirements=(p.requirements||[]).filter(function(r){return !ReqDocs.isDeletedSlackRequirement(r.id,r.text)}); var section=p.remote&&p.remote.sections&&p.remote.sections.requirements; if(section&&section.content) section.content=ReqDocs.removeDeletedSlackLine(section.content);});
+  save();
   Object.keys(G.projects).forEach(function(k){var p=G.projects[k]; if(PrototypeFeedback.sync(p.items,p.protoComments,p.links)) save(); var before=(p.reqDocs||[]).length; p.reqDocs=ReqDocs.dedupe(p.reqDocs); if(p.reqDocs.length!==before) save();});
   (S.items||[]).forEach(function(it){ if(it.status!=='accepted') return; var gone=ReqDocs.deferredMatches(it,S.requirements); if(!gone.length) return; S.requirements=S.requirements.filter(function(q){return gone.indexOf(q)===-1}); it.undo=it.undo||{}; it.undo.removedReqs=gone; it.removed_requirements=gone; logEntry({kind:'accept',title:it.title,note:'Applied the earlier decision to Requirements.',effects:['Removed '+gone.map(function(q){return q.id}).join(', ')+' (moved to a later phase)','Confluence update sent']}); save(); if(nconnected()) nDecision(it,'accepted'); });
   renderAll();
