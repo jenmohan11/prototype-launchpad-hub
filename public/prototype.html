@@ -192,7 +192,15 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
   .item-top .pill{grid-column:1 / -1;justify-self:start}
   .proj h1{font-size:23px}
 }
-@media (prefers-reduced-motion:reduce){.marker{transition:none}}
+  .sov{font-size:14px}
+  .sov .sov-h{font-family:var(--font-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;margin:16px 0 6px}
+  .sov .sov-h:first-of-type{margin-top:0}
+  .sov .sov-sub{font-size:13.5px;font-weight:600;margin:10px 0 4px}
+  .sov ul{margin:2px 0 10px;padding-left:18px;display:flex;flex-direction:column;gap:5px}
+  .sov li{line-height:1.45}
+  .sov p{margin:2px 0 10px;line-height:1.45}
+  .sov .sov-note{margin-bottom:10px}
+  @media (prefers-reduced-motion:reduce){.marker{transition:none}}
 </style>
 
 <div class="wrap">
@@ -694,8 +702,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
     var sv=S.sov||{why:'',goal:'',clients:[],goals:[]};
     var sovAgent=liveSov;
     var sov=(sovAgent&&sovAgent.content)?
-      '<p class="note-small mono">Written by the orchestrator agent in n8n, using the quarterly goals. Updated '+esc(fmtDay(sovAgent.updated||((S.remote||{}).fetched)||''))+'.</p>'+
-      '<p style="white-space:pre-wrap">'+esc(sovAgent.content)+'</p>'
+      '<div class="sov"><p class="note-small mono sov-note">Written by the orchestrator agent in n8n, using the quarterly goals. Updated '+esc(fmtDay(sovAgent.updated||((S.remote||{}).fetched)||''))+'.</p>'+sovHtml(sovAgent.content)+'</div>'
     : '<p class="muted">Waiting for the Statement of Value from n8n.</p>';
     var reqSection=liveRequirements[S.project.jira||'SCRUM'];
     var reqRows=reqSection?reqSection.requirements:[];
