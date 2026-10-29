@@ -216,6 +216,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
 <script src="/meeting-notes.js"></script>
 <script src="/requirements-docs.js"></script>
 <script src="/prototype-feedback.js"></script>
+<script src="/card-folders.js"></script>
 <script>
 (function(){
   var KEY='launchpad-proto-v3';
@@ -499,7 +500,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
   function personaName(){ return G.persona==='admin'? S.project.pm+' (PM)' : (G.persona==='dev'?'Dev':'Business')+' stakeholder'; }
 
   /* ---------- derived ---------- */
-  function pending(){ return S.items.filter(function(i){return i.status==='pending'}); }
+  function pending(){ return S.items.filter(function(i){return CardFolders.inFolder(i,'pending')}); }
   function sortItems(a){ return a.slice().sort(function(x,y){
     return (TYPE_ORDER[x.type]-TYPE_ORDER[y.type])||(PRIO_ORDER[x.priority]-PRIO_ORDER[y.priority])||(y.created>x.created?1:-1);
   }); }
@@ -509,8 +510,8 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
     feedback:p.filter(function(i){return i.type==='feedback'}).length,
     comment:p.filter(function(i){return i.type==='comment'}).length,
     milestone:p.filter(function(i){return i.type==='milestone'}).length,
-    delayed:S.items.filter(function(i){return i.status==='delayed'}).length,
-    decided:S.items.filter(function(i){return i.status==='accepted'||i.status==='rejected'}).length
+    delayed:S.items.filter(function(i){return CardFolders.inFolder(i,'delayed')}).length,
+    decided:S.items.filter(function(i){return CardFolders.inFolder(i,'decided')}).length
   }; }
   function stage(){ var p=S.progress; if(p<50&&!S.reqDone&&S.reqDraft) return 'the requirements draft is live and in review'; return p<35?'planning and requirements gathering is in progress': p<50?'the requirements draft is done and in review': (p<75?'requirements are complete and the project is moving into build':'the build is in evaluation and moving toward handoff'); }
   function summaryText(){
@@ -618,7 +619,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
   function renderMonitor(){
     var c=counts(), sum=summaryText();
     var list;
-    if(ui.tab==='pending') list=sortItems(pending()).concat(ui.filter==='all'?sortItems(S.items.filter(function(i){return i.status==='delayed'})):[]); else if(ui.tab==='delayed') list=sortItems(S.items.filter(function(i){return i.status==='delayed'})); else list=S.items.filter(function(i){return i.status==='accepted'||i.status==='rejected'}).sort(function(a,b){return (b.decided_at||'')>(a.decided_at||'')?1:-1});
+    if(ui.tab==='pending') list=sortItems(pending()); else if(ui.tab==='delayed') list=sortItems(S.items.filter(function(i){return CardFolders.inFolder(i,'delayed')})); else list=S.items.filter(function(i){return CardFolders.inFolder(i,'decided')}).sort(function(a,b){return (b.decided_at||'')>(a.decided_at||'')?1:-1});
     if(ui.tab==='pending' && ui.filter!=='all') list=list.filter(function(i){return i.type===ui.filter});
     var flt=[['all','All ('+pending().length+')'],['blocker','Blockers ('+c.blocker+')'],['requirement_change','Requirement changes ('+c.requirement_change+')'],['feedback','Feedback cards ('+c.feedback+')'],['comment','Comments ('+c.comment+')'],['milestone','Milestones ('+c.milestone+')']];
     var run='';
@@ -776,7 +777,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
     var it=S.items.find(function(i){return i.key===key});
     if(!it||!can.approve()||it.status!=='pending') return;
     var note=(ui.drafts['note:'+key]||'').trim(); if(!note) return;
-    it.status={accept:'accepted',reject:'rejected',delay:'delayed'}[decision];
+    it.status={accept:'accepted',reject:'rejected',delay:'delayed'}[decision]; delete it.reopened;
     it.decision_notes=note; it.decided_by=S.project.pm; it.decided_at=new Date().toISOString();
     var fx=[];
     if(decision==='accept'&&it.type==='milestone'){
@@ -950,7 +951,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
     }
     else if(act==='art'){ ui.open[a.dataset.id]=!ui.open[a.dataset.id]; renderArtifacts(); }
     else if(act==='fbtab'){ ui.fbTab=v; renderArtifacts(); }
-    else if(act==='reopen'){ var r=S.items.find(function(i){return i.key===key}); if(r&&can.approve()){ var was=r.status, fx2=[]; if(was==='accepted'&&r.undo){ if(r.undo.dp){ S.progress=Math.max(0,S.progress-r.undo.dp); fx2.push('Progress back to '+S.progress+'%'); } if(r.undo.reqDraft){ S.reqDraft=false; fx2.push('Reqs draft done undone'); } if(r.undo.req){ S.requirements=S.requirements.filter(function(q){return q.from!==r.key}); fx2.push('Requirement removed'); } if(r.undo.removedReqs){ S.requirements=S.requirements.concat(r.undo.removedReqs); delete r.removed_requirements; fx2.push('Requirement restored'); } } delete r.undo; r.status='pending'; delete r.decision_notes; delete r.decided_by; delete r.decided_at; if(nconnected()) nDecision(r,'pending'); logEntry({kind:'reopen',title:r.title,note:(was==='delayed'?'Moved back to needs attention.':'Decision changed: was '+was+', moved back for a new decision.'),effects:fx2}); ui.tab='pending'; ui.expanded=r.key; save(); renderAll(); } }
+    else if(act==='reopen'){ var r=S.items.find(function(i){return i.key===key}); if(r&&can.approve()){ var was=r.status, fx2=[]; if(was==='accepted'&&r.undo){ if(r.undo.dp){ S.progress=Math.max(0,S.progress-r.undo.dp); fx2.push('Progress back to '+S.progress+'%'); } if(r.undo.reqDraft){ S.reqDraft=false; fx2.push('Reqs draft done undone'); } if(r.undo.req){ S.requirements=S.requirements.filter(function(q){return q.from!==r.key}); fx2.push('Requirement removed'); } if(r.undo.removedReqs){ S.requirements=S.requirements.concat(r.undo.removedReqs); delete r.removed_requirements; fx2.push('Requirement restored'); } } delete r.undo; r.status='pending'; r.reopened=true; delete r.stale; delete r.decision_notes; delete r.decided_by; delete r.decided_at; if(nconnected()) nDecision(r,'pending'); logEntry({kind:'reopen',title:r.title,note:(was==='delayed'?'Moved back to needs attention.':'Decision changed: was '+was+', moved back for a new decision.'),effects:fx2}); ui.tab='pending'; ui.expanded=r.key; save(); renderAll(); } }
     else if(act==='sample-note'){ ui.drafts.mnTitle=SAMPLE_NOTE.title; ui.drafts.mnDate=SAMPLE_NOTE.date; ui.drafts.mnText=SAMPLE_NOTE.text; renderArtifacts(); }
     else if(act==='sim-confluence'){ if(ui.run&&ui.run.active) return; if(!ReqDocs.canAddReqDoc(S.reqDocs)){ toast('A requirements doc is already linked. Delete it before adding another.'); return; } var cd={id:'d'+Date.now(),title:'Reporting Manager requirements (Confluence page)',url:'',by:'Confluence Agent',date:'2026-10-19'}; S.reqDocs=S.reqDocs||[]; S.reqDocs.unshift(cd); ui.open.req=true; save(); renderArtifacts(); proposeReqMilestone(cd,true).then(scrollToMonitor); }
     else if(act==='goto-links'){ ui.open.prototype=true; renderArtifacts(); var t2=$('#art-prototype'); if(t2) t2.scrollIntoView({block:'center'}); }
@@ -1076,7 +1077,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
       var existing=S.items.find(function(i){return i.key===key});
       if(existing){ if(PrototypeFeedback.normalize(existing,S.protoComments,S.links)) notesChanged=true; return; }
       var pts=list(r.key_points);
-      var src=String(r.source||'Meeting Notes'); var st=['pending','accepted','rejected','delayed'].indexOf(r.status)>-1?r.status:'pending';
+      var src=String(r.source||'Meeting Notes'); var st=CardFolders.folders(r.status).length?CardFolders.norm(r.status):'pending';
       S.items.unshift({key:key,project_key:r.project_key||'SCRUM',title:String(r.title||key),source:src,by:r.submitted_by||'n8n',date:String(r.source_date||'').slice(0,10)||'2026-10-16',
         type:types.indexOf(r.item_type)>-1?r.item_type:(src==='Feedback Card'?'feedback':(src==='Meeting Notes'?'requirement_change':'comment')),
         priority:prio(r),points:pts.length?pts:['(no key points)'],raw:String(r.raw_text||''),
@@ -1085,6 +1086,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
       ui.fresh[key]=true; n++;
     });
     if(PrototypeFeedback.sync(S.items,S.protoComments,S.links)) notesChanged=true;
+    if(label==='n8n sync'&&CardFolders.reconcile(S.items,rows)){ save(); renderAll(); }
     if(notesChanged){ save(); renderArtifacts(); renderMonitor(); }
     if(n){ logEntry({kind:'import',title:(label==='n8n sync'?'Synced ':'Imported ')+plural(n,'item')+' from the n8n Action Items table',note:'',effects:[]}); ui.drafts.import=''; ui.importOpen=false; save(); renderAll(); if(quiet!=='silent') toast(plural(n,'item')+' added to the queue.'); }
     else if(quiet!=='silent'&&!quiet) toast('No new rows found. Every row is added, even when some fields are empty; only exact duplicates are skipped.');
