@@ -6,6 +6,18 @@ const sandbox = { ReqDocs: undefined as any };
 runInNewContext(readFileSync('public/requirements-docs.js', 'utf8'), sandbox);
 const api = sandbox.ReqDocs;
 
+describe('Authoritative n8n requirements section', () => {
+  it('selects the structured Requirements array and preserves Confluence metadata', () => {
+    const section = { section: 'Requirements', requirements: [{ id: 'R13', requirement: 'Scheduled reports can be delivered to Slack', priority: 'P2' }], confluence_version: 18, updated: '2026-10-28' };
+    expect(api.requirementsSection([{ section: 'Summary', requirements: [{ id: 'R99' }] }, section])).toEqual(section);
+    expect(api.requirementsSection([{ section: 'Requirements', content: 'Legacy requirements' }])).toBeNull();
+    expect(api.requirementsSection(undefined)).toBeNull();
+  });
+  it('uses an empty authoritative list without falling back to old data', () => {
+    expect(api.requirementsSection([{ section: 'Requirements', requirements: [] }])?.requirements).toEqual([]);
+  });
+});
+
 describe('Requirements docs: one master doc', () => {
   it('allows adding a doc only when none is linked', () => {
     expect(api.canAddReqDoc([])).toBe(true);
