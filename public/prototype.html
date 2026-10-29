@@ -431,7 +431,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
     try{ var j=await nfetch(nurl(nep('items'),{project_key:S.project.jira||'SCRUM',key:c.key}));
       applySprint(j); applySections(j); renderArtifacts(); var pend=Array.isArray(j)?j:(j.items||j.data||j.rows||[]); var dec=Array.isArray(j.decided)?j.decided:[]; var decKeys={}; dec.forEach(function(d){ if(d&&d.item_key) decKeys[d.item_key]=1; });
       var rows=pend.filter(function(r){return r&&!decKeys[r.item_key];}).map(function(r){return Object.assign({},r,{status:'pending'});}).concat(dec.map(function(d){return Object.assign({},d,{status:d.decision||d.status});}));
-      S.items=[]; liveLoaded=true; console.log('[n8n] rendering',rows.length,'item(s)'); ui.nNeedKey=false; ui.tab='pending'; ui.filter='all'; importRows(rows,'n8n sync',true); await nState(true); ui.nstatus='Synced '+new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})+'. '+rows.length+' pending row'+(rows.length===1?'':'s')+' in n8n.';
+      S.items=[]; liveLoaded=true; console.log('[n8n] rendering',rows.length,'item(s)'); ui.nNeedKey=false; ui.tab='pending'; ui.filter='all'; importRows(rows,'n8n sync',true); await nState(true); ui.nstatus='Synced '+new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})+'. '+pend.length+' pending in n8n.';
     }catch(e){ ui.nstatus=nerr(e); toast(nerr(e)); }
     ui.nbusy=false; renderMonitor(); if(ui.drawerOpen) renderDrawer();
   }
