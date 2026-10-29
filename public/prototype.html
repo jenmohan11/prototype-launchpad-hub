@@ -1097,6 +1097,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
   Object.keys(G.projects).forEach(function(k){var p=G.projects[k]; p.requirements=(p.requirements||[]).filter(function(r){return !ReqDocs.isDeletedSlackRequirement(r.id,r.text)}); var section=p.remote&&p.remote.sections&&p.remote.sections.requirements; if(section&&section.content) section.content=ReqDocs.removeDeletedSlackLine(section.content);});
   save();
   Object.keys(G.projects).forEach(function(k){var p=G.projects[k]; if(PrototypeFeedback.sync(p.items,p.protoComments,p.links)) save(); var before=(p.reqDocs||[]).length; p.reqDocs=ReqDocs.dedupe(p.reqDocs); if(p.reqDocs.length!==before) save();});
+  Object.keys(G.projects).forEach(function(k){ G.projects[k].items=[]; }); /* cards come only from the live n8n response */
   (S.items||[]).forEach(function(it){ if(it.status!=='accepted') return; var gone=ReqDocs.deferredMatches(it,S.requirements); if(!gone.length) return; S.requirements=S.requirements.filter(function(q){return gone.indexOf(q)===-1}); it.undo=it.undo||{}; it.undo.removedReqs=gone; it.removed_requirements=gone; logEntry({kind:'accept',title:it.title,note:'Applied the earlier decision to Requirements.',effects:['Removed '+gone.map(function(q){return q.id}).join(', ')+' (moved to a later phase)','Confluence update sent']}); save(); if(nconnected()) nDecision(it,'accepted'); });
   renderAll();
   if(nconnected()) nSync();
