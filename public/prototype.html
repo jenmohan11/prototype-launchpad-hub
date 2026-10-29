@@ -219,6 +219,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
 <script>
 (function(){
   var KEY='launchpad-proto-v3';
+  var liveRequirements={};
   var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
   var $=function(s){return document.querySelector(s)};
   var sleep=function(ms){return new Promise(function(r){setTimeout(r,ms)})};
@@ -245,8 +246,9 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
   }
   function applySections(j){
     if(!j||typeof j!=='object'||!Array.isArray(j.sections)) return false;
+    if(j.sections.some(function(x){return x&&x.section==='Requirements'})) liveRequirements[S.project.jira||'SCRUM']=ReqDocs.requirementsSection(j.sections);
     var m=Object.assign({},(S.remote&&S.remote.sections)||{}), changed=false;
-    j.sections.forEach(function(x){ if(x&&x.section){ var k=String(x.section).toLowerCase().replace(/\s+/g,'_'); if(k==='requirements'&&x.content) x=Object.assign({},x,{content:ReqDocs.removeDeletedSlackLine(x.content)}); if(JSON.stringify(m[k])!==JSON.stringify(x)){ m[k]=x; changed=true; } } });
+    j.sections.forEach(function(x){ if(x&&x.section){ var k=String(x.section).toLowerCase().replace(/\s+/g,'_'); if(k==='requirements') return; if(JSON.stringify(m[k])!==JSON.stringify(x)){ m[k]=x; changed=true; } } });
     if(!changed) return false;
     S.remote=Object.assign({},S.remote,{sections:m,fetched:new Date().toISOString()});
     save(); console.log('[n8n] sections updated from agents:',Object.keys(m).join(', ')); return true;
@@ -692,11 +694,14 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
       '<div><h4 class="eyebrow">Why</h4><p>'+esc(sv.why)+'</p></div>'+
       '<div><h4 class="eyebrow">Sprint goal</h4><p>'+esc(sv.goal)+'</p></div>'+
       '<div class="grid2"><div><h4 class="eyebrow">Key clients</h4><div class="row" style="margin-top:4px">'+sv.clients.map(function(c){return '<span class="chip">'+esc(c)+'</span>'}).join('')+'</div></div><div><h4 class="eyebrow">Key goals</h4><ul class="plain">'+sv.goals.map(function(g){return '<li>'+esc(g)+'</li>'}).join('')+'</ul></div></div>';
+    var reqSection=liveRequirements[S.project.jira||'SCRUM'];
+    var reqRows=reqSection?reqSection.requirements:[];
+    var reqSync=reqSection?'Synced from Confluence'+(reqSection.confluence_version!=null?' v'+String(reqSection.confluence_version).replace(/^v/i,''):'')+(reqSection.updated?' · '+reqSection.updated:''):'';
     var reqs=
-      ((S.remote&&S.remote.sections&&S.remote.sections.requirements&&S.remote.sections.requirements.content)?'<div class="decision"><h4 class="eyebrow">Requirements summary (written by the agents)</h4><p class="mono" style="white-space:pre-wrap;font-size:12px;margin:6px 0 0">'+esc(S.remote.sections.requirements.content)+'</p></div>':'')+
       '<div>'+((S.reqDocs&&S.reqDocs.length)?S.reqDocs.map(function(d){return '<div class="req"><span><b>'+esc(d.title)+'</b>'+(d.url?' &nbsp;<a href="'+esc(d.url)+'" target="_blank" rel="noopener">Open &#8599;</a>':'')+'<br><span class="note-small">Added by '+esc(d.by)+' on '+esc(fmtDay(d.date))+'</span></span>'+((can.approve()||d.by===personaName())?'<button class="btn small crit" type="button" data-action="reqdoc-del" data-id="'+esc(d.id)+'">Delete</button>':'')+'</div>'}).join(''):'<p class="muted">No requirements doc added yet.</p>')+'</div>'+
       (ReqDocs.canAddReqDoc(S.reqDocs)?'<form data-form="reqdoc" class="stack" style="gap:10px"><h3>Add a requirements doc</h3><div class="grid2"><div class="field"><label for="rd-title">Doc title</label><input id="rd-title" required data-draft="rdTitle" value="'+esc(ui.drafts.rdTitle||'')+'" placeholder="Reporting Manager PRD v1"></div><div class="field"><label for="rd-url">Link (https)</label><input id="rd-url" type="url" data-draft="rdUrl" value="'+esc(ui.drafts.rdUrl||'')+'" placeholder="https://..."></div></div><div class="row"><button class="btn primary" type="submit" '+(busy?'disabled':'')+'>Add doc</button><span class="note-small">One master doc only. When the PM adds a doc, Pad status moves to Reqs draft done. When anyone else adds one, the orchestrator proposes it and the PM confirms.</span></div></form>':'<p class="note-small" style="margin-top:8px">One master requirements doc is allowed. A doc is already linked — delete it above to add a different one.</p>')+
-      '<div>'+S.requirements.map(function(r){return '<div class="req"><span><span class="mono">'+esc(r.id)+'</span> &nbsp;'+esc(r.text)+(r.from?'<br><span class="note-small">Added from '+esc(r.from)+'</span>':'')+'</span><span class="pill plain">'+(r.sync==='synced'?'Synced':'Write-back queued')+'</span></div>'}).join('')+'</div>';
+      (reqSync?'<p class="note-small">'+esc(reqSync)+'</p>':'')+
+      '<div>'+(reqRows.length?reqRows.map(function(r){return '<div class="req"><span><span class="mono">'+esc('R'+String(r.id==null?'':r.id).replace(/^R-?/i,''))+'</span> — '+esc(r.requirement)+(r.priority!=null?' ('+esc(r.priority)+')':'')+'</span></div>'}).join(''):'<p class="muted">'+(reqSection?'No requirements in Confluence.':'Waiting for requirements from n8n.')+'</p>')+'</div>';
     var cards=S.cards.concat(S.protoComments.map(function(c){return Object.assign({},c,{source:'Prototype Feedback',audience:c.audience||'internal'});})).filter(function(c){return c.audience===ui.fbTab});
     var fb=
       '<div class="tabs" role="tablist" style="margin-top:0">'+[['internal','Internal'],['client','Clients']].map(function(t){return '<button role="tab" type="button" data-action="fbtab" data-v="'+t[0]+'" aria-selected="'+(ui.fbTab===t[0])+'">'+t[1]+'</button>'}).join('')+'</div>'+
@@ -724,7 +729,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
     }).join('') : '<p class="muted">No changes yet.</p>';
     $('#sec-artifacts').innerHTML='<span class="eyebrow">Artifacts</span><h2>Everything behind this project</h2>'+
       artBox('sov','Statement of Value','why, goals, key clients',sov)+
-      artBox('req','Requirements','connected to Confluence · '+S.requirements.length,reqs)+
+      artBox('req','Requirements','connected to Confluence · '+reqRows.length,reqs)+
       artBox('feedback','Stakeholder Feedback','internal and clients · '+(S.cards.length+S.protoComments.length),fb)+
       artBox('meetings','Meeting Notes Repository','notes and recordings · '+plural(S.notes.length,'note'),notes)+
       artBox('prototype','Prototype and Design','Claude and Miro',proto)+

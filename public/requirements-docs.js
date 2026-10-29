@@ -6,6 +6,12 @@
   function canAddReqDoc(reqDocs) {
     return !reqDocs || reqDocs.length === 0;
   }
+  function requirementsSection(sections) {
+    if (!Array.isArray(sections)) return null;
+    return sections.find(function (section) {
+      return section && section.section === 'Requirements' && Array.isArray(section.requirements);
+    }) || null;
+  }
   function dedupe(reqDocs) {
     if (!reqDocs || !Array.isArray(reqDocs)) return [];
     var seen = {};
@@ -50,5 +56,5 @@
       return !match || !isDeletedSlackRequirement(match[1], match[2]);
     }).join('\n');
   }
-  global.ReqDocs = { canAddReqDoc: canAddReqDoc, dedupe: dedupe, isDeferral: isDeferral, deferredMatches: deferredMatches, isDeletedSlackRequirement: isDeletedSlackRequirement, removeDeletedSlackLine: removeDeletedSlackLine };
+  global.ReqDocs = { requirementsSection: requirementsSection, canAddReqDoc: canAddReqDoc, dedupe: dedupe, isDeferral: isDeferral, deferredMatches: deferredMatches, isDeletedSlackRequirement: isDeletedSlackRequirement, removeDeletedSlackLine: removeDeletedSlackLine };
 })(typeof window !== 'undefined' ? window : globalThis);
