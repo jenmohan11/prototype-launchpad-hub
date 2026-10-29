@@ -245,7 +245,9 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
     var label=o.label||(o.name?(o.name+(o.start&&o.end?' · '+fmtSprintDay(o.start)+' to '+fmtSprintDay(o.end,true):'')):'');
     if(!label||label===S.project.sprint) return false; S.project.sprint=label; save(); renderProject(); console.log('[n8n] sprint updated from Jira agent:',label); return true;
   }
+  var liveSov=null, liveLoaded=false;
   function applySections(j){
+    if(j&&Array.isArray(j.sections)){ var sv=j.sections.find(function(x){return x&&x.section==='Statement of Value'}); if(sv) liveSov=sv; }
     if(!j||typeof j!=='object'||!Array.isArray(j.sections)) return false;
     if(j.sections.some(function(x){return x&&x.section==='Requirements'})) liveRequirements[S.project.jira||'SCRUM']=ReqDocs.requirementsSection(j.sections);
     var m=Object.assign({},(S.remote&&S.remote.sections)||{}), changed=false;
@@ -427,7 +429,9 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
     var c=ncfg(); if(!nconnected()) return;
     ui.nbusy=true; renderMonitor();
     try{ var j=await nfetch(nurl(nep('items'),{project_key:S.project.jira||'SCRUM',key:c.key}));
-      applySprint(j); applySections(j); var rows=Array.isArray(j)?j:(j.items||j.data||j.rows||[]); console.log('[n8n] rendering',rows.length,'item(s)'); ui.nNeedKey=false; ui.tab='pending'; ui.filter='all'; importRows(rows,'n8n sync',true); await nState(true); ui.nstatus='Synced '+new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})+'. '+rows.length+' pending row'+(rows.length===1?'':'s')+' in n8n.';
+      applySprint(j); applySections(j); renderArtifacts(); var pend=Array.isArray(j)?j:(j.items||j.data||j.rows||[]); var dec=Array.isArray(j.decided)?j.decided:[]; var decKeys={}; dec.forEach(function(d){ if(d&&d.item_key) decKeys[d.item_key]=1; });
+      var rows=pend.filter(function(r){return r&&!decKeys[r.item_key];}).map(function(r){return Object.assign({},r,{status:'pending'});}).concat(dec.map(function(d){return Object.assign({},d,{status:d.decision||d.status});}));
+      S.items=[]; liveLoaded=true; console.log('[n8n] rendering',rows.length,'item(s)'); ui.nNeedKey=false; ui.tab='pending'; ui.filter='all'; importRows(rows,'n8n sync',true); await nState(true); ui.nstatus='Synced '+new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})+'. '+rows.length+' pending row'+(rows.length===1?'':'s')+' in n8n.';
     }catch(e){ ui.nstatus=nerr(e); toast(nerr(e)); }
     ui.nbusy=false; renderMonitor(); if(ui.drawerOpen) renderDrawer();
   }
@@ -619,7 +623,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
   function renderMonitor(){
     var c=counts(), sum=summaryText();
     var list;
-    if(ui.tab==='pending') list=sortItems(pending()); else if(ui.tab==='delayed') list=sortItems(S.items.filter(function(i){return CardFolders.inFolder(i,'delayed')})); else list=S.items.filter(function(i){return CardFolders.inFolder(i,'decided')}).sort(function(a,b){return (b.decided_at||'')>(a.decided_at||'')?1:-1});
+    if(ui.tab==='pending') list=sortItems(pending()); else if(ui.tab==='delayed'||ui.tab==='accepted'||ui.tab==='rejected') list=sortItems(S.items.filter(function(i){return CardFolders.inFolder(i,ui.tab)})); else list=S.items.filter(function(i){return CardFolders.inFolder(i,'decided')}).sort(function(a,b){return (b.decided_at||'')>(a.decided_at||'')?1:-1});
     if(ui.tab==='pending' && ui.filter!=='all') list=list.filter(function(i){return i.type===ui.filter});
     var flt=[['all','All ('+pending().length+')'],['blocker','Blockers ('+c.blocker+')'],['requirement_change','Requirement changes ('+c.requirement_change+')'],['feedback','Feedback cards ('+c.feedback+')'],['comment','Comments ('+c.comment+')'],['milestone','Milestones ('+c.milestone+')']];
     var run='';
@@ -640,7 +644,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
 
       (ui.importOpen&&can.approve()?'<div class="decision" style="margin-top:12px"><label for="imp">Paste rows exported from the n8n "Action Items" data table (JSON array)</label><textarea id="imp" data-draft="import" placeholder=\'[{"item_key":"...","title":"...","status":"pending", ...}]\'>'+esc(ui.drafts.import||'')+'</textarea><div class="row" style="margin-top:8px"><button class="btn primary small" type="button" data-action="import-go">Add to queue</button></div></div>':'')+
       run+
-      '<div class="tabs" role="tablist">'+[['pending','Needs attention ('+pending().length+')'],['delayed','Delayed ('+c.delayed+')'],['decided','Decided ('+c.decided+')']].map(function(t){return '<button role="tab" type="button" data-action="tab" data-v="'+t[0]+'" aria-selected="'+(ui.tab===t[0])+'">'+t[1]+'</button>'}).join('')+'</div>'+
+      '<div class="tabs" role="tablist">'+[['pending','Needs attention ('+pending().length+')'],['delayed','Delayed ('+c.delayed+')'],['decided','Decided ('+c.decided+')'],['accepted','Accepted ('+S.items.filter(function(i){return CardFolders.inFolder(i,'accepted')}).length+')'],['rejected','Rejected ('+S.items.filter(function(i){return CardFolders.inFolder(i,'rejected')}).length+')']].map(function(t){return '<button role="tab" type="button" data-action="tab" data-v="'+t[0]+'" aria-selected="'+(ui.tab===t[0])+'">'+t[1]+'</button>'}).join('')+'</div>'+
       (ui.tab==='pending'?'<div class="filters" role="group" aria-label="Filter">'+flt.map(function(f){return '<button class="chip" type="button" data-action="filter" data-v="'+f[0]+'" aria-pressed="'+(ui.filter===f[0])+'">'+esc(f[1])+'</button>'}).join('')+'</div>':'<div style="height:8px"></div>')+
       '<div class="items">'+(list.length? list.map(itemRow).join('') : '<div class="empty">'+(ui.tab==='pending'?'Nothing matches this filter. Add meeting notes under Artifacts to see the agents propose updates.':'Nothing here yet.')+'</div>')+'</div>';
   }
@@ -687,21 +691,16 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
   function renderArtifacts(){
     var busy=!!(ui.run&&ui.run.active);
     var sv=S.sov||{why:'',goal:'',clients:[],goals:[]};
-    var sovAgent=S.remote&&S.remote.sections&&S.remote.sections.statement_of_value;
+    var sovAgent=liveSov;
     var sov=(sovAgent&&sovAgent.content)?
       '<p class="note-small mono">Written by the orchestrator agent in n8n, using the quarterly goals. Updated '+esc(fmtDay(sovAgent.updated||((S.remote||{}).fetched)||''))+'.</p>'+
       '<p style="white-space:pre-wrap">'+esc(sovAgent.content)+'</p>'
-    :
-      '<div><h4 class="eyebrow">Why</h4><p>'+esc(sv.why)+'</p></div>'+
-      '<div><h4 class="eyebrow">Sprint goal</h4><p>'+esc(sv.goal)+'</p></div>'+
-      '<div class="grid2"><div><h4 class="eyebrow">Key clients</h4><div class="row" style="margin-top:4px">'+sv.clients.map(function(c){return '<span class="chip">'+esc(c)+'</span>'}).join('')+'</div></div><div><h4 class="eyebrow">Key goals</h4><ul class="plain">'+sv.goals.map(function(g){return '<li>'+esc(g)+'</li>'}).join('')+'</ul></div></div>';
+    : '<p class="muted">Waiting for the Statement of Value from n8n.</p>';
     var reqSection=liveRequirements[S.project.jira||'SCRUM'];
     var reqRows=reqSection?reqSection.requirements:[];
-    var reqSync=reqSection?'Synced from Confluence'+(reqSection.confluence_version!=null?' v'+String(reqSection.confluence_version).replace(/^v/i,''):'')+(reqSection.updated?' · '+reqSection.updated:''):'';
+    var reqSync=reqSection?'Requirements doc: Confluence v'+String(reqSection.confluence_version==null?'':reqSection.confluence_version).replace(/^v/i,'')+' · '+(reqSection.updated||''):'';
     var reqs=
-      '<div>'+((S.reqDocs&&S.reqDocs.length)?S.reqDocs.map(function(d){return '<div class="req"><span><b>'+esc(d.title)+'</b>'+(d.url?' &nbsp;<a href="'+esc(d.url)+'" target="_blank" rel="noopener">Open &#8599;</a>':'')+'<br><span class="note-small">Added by '+esc(d.by)+' on '+esc(fmtDay(d.date))+'</span></span>'+((can.approve()||d.by===personaName())?'<button class="btn small crit" type="button" data-action="reqdoc-del" data-id="'+esc(d.id)+'">Delete</button>':'')+'</div>'}).join(''):'<p class="muted">No requirements doc added yet.</p>')+'</div>'+
-      (ReqDocs.canAddReqDoc(S.reqDocs)?'<form data-form="reqdoc" class="stack" style="gap:10px"><h3>Add a requirements doc</h3><div class="grid2"><div class="field"><label for="rd-title">Doc title</label><input id="rd-title" required data-draft="rdTitle" value="'+esc(ui.drafts.rdTitle||'')+'" placeholder="Reporting Manager PRD v1"></div><div class="field"><label for="rd-url">Link (https)</label><input id="rd-url" type="url" data-draft="rdUrl" value="'+esc(ui.drafts.rdUrl||'')+'" placeholder="https://..."></div></div><div class="row"><button class="btn primary" type="submit" '+(busy?'disabled':'')+'>Add doc</button><span class="note-small">One master doc only. When the PM adds a doc, Pad status moves to Reqs draft done. When anyone else adds one, the orchestrator proposes it and the PM confirms.</span></div></form>':'<p class="note-small" style="margin-top:8px">One master requirements doc is allowed. A doc is already linked — delete it above to add a different one.</p>')+
-      (reqSync?'<p class="note-small">'+esc(reqSync)+'</p>':'')+
+      (reqSync?'<p class="note-small">'+(reqSection.confluence_link?'<a href="'+esc(reqSection.confluence_link)+'" target="_blank" rel="noopener">'+esc(reqSync)+' &#8599;</a>':esc(reqSync))+'</p>':'')+
       '<div>'+(reqRows.length?reqRows.map(function(r){return '<div class="req"><span><span class="mono">'+esc('R'+String(r.id==null?'':r.id).replace(/^R-?/i,''))+'</span> — '+esc(r.requirement)+(r.priority!=null?' ('+esc(r.priority)+')':'')+'</span></div>'}).join(''):'<p class="muted">'+(reqSection?'No requirements in Confluence.':'Waiting for requirements from n8n.')+'</p>')+'</div>';
     var cards=S.cards.concat(S.protoComments.map(function(c){return Object.assign({},c,{source:'Prototype Feedback',audience:c.audience||'internal'});})).filter(function(c){return c.audience===ui.fbTab});
     var fb=
@@ -1082,7 +1081,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
         type:types.indexOf(r.item_type)>-1?r.item_type:(src==='Feedback Card'?'feedback':(src==='Meeting Notes'?'requirement_change':'comment')),
         priority:prio(r),points:pts.length?pts:['(no key points)'],raw:String(r.raw_text||''),
         affected:sects(r.affected_sections),
-        change:r.proposed_change?String(r.proposed_change):'Review and decide.',impact:r.impact?String(r.impact):'Not assessed.',reason:r.attention_reason?String(r.attention_reason):'',link:r.source_link?String(r.source_link):'',sourceRef:r.source_ref?String(r.source_ref):'',clients:'',cardId:((String(r.source_ref||'').match(/launchpad-card:([^;\s]+)/)||[])[1]||undefined),status:st,created:new Date().toISOString()});
+        change:r.proposed_change?String(r.proposed_change):'Review and decide.',impact:r.impact?String(r.impact):'Not assessed.',reason:r.attention_reason?String(r.attention_reason):'',link:r.source_link?String(r.source_link):'',sourceRef:r.source_ref?String(r.source_ref):'',clients:'',cardId:((String(r.source_ref||'').match(/launchpad-card:([^;\s]+)/)||[])[1]||undefined),status:st,decided_by:r.decided_by||undefined,decision_notes:r.decision_notes||undefined,decided_at:r.decided_at||undefined,created:new Date().toISOString()});
       ui.fresh[key]=true; n++;
     });
     if(PrototypeFeedback.sync(S.items,S.protoComments,S.links)) notesChanged=true;
@@ -1098,6 +1097,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
   Object.keys(G.projects).forEach(function(k){var p=G.projects[k]; p.requirements=(p.requirements||[]).filter(function(r){return !ReqDocs.isDeletedSlackRequirement(r.id,r.text)}); var section=p.remote&&p.remote.sections&&p.remote.sections.requirements; if(section&&section.content) section.content=ReqDocs.removeDeletedSlackLine(section.content);});
   save();
   Object.keys(G.projects).forEach(function(k){var p=G.projects[k]; if(PrototypeFeedback.sync(p.items,p.protoComments,p.links)) save(); var before=(p.reqDocs||[]).length; p.reqDocs=ReqDocs.dedupe(p.reqDocs); if(p.reqDocs.length!==before) save();});
+  Object.keys(G.projects).forEach(function(k){ G.projects[k].items=[]; }); /* cards come only from the live n8n response */
   (S.items||[]).forEach(function(it){ if(it.status!=='accepted') return; var gone=ReqDocs.deferredMatches(it,S.requirements); if(!gone.length) return; S.requirements=S.requirements.filter(function(q){return gone.indexOf(q)===-1}); it.undo=it.undo||{}; it.undo.removedReqs=gone; it.removed_requirements=gone; logEntry({kind:'accept',title:it.title,note:'Applied the earlier decision to Requirements.',effects:['Removed '+gone.map(function(q){return q.id}).join(', ')+' (moved to a later phase)','Confluence update sent']}); save(); if(nconnected()) nDecision(it,'accepted'); });
   renderAll();
   if(nconnected()) nSync();
