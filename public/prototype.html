@@ -696,6 +696,30 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
     return '<span class="chip">'+esc(label)+': link not set</span>';
   }
   function runningNote(){ return ui.run&&ui.run.active? '<p class="note-small mono">Agents are working on "'+esc(ui.run.title)+'"...</p>':''; }
+  var SOV_MAIN=['why','why this quarter','sprint goal','key clients','key goals'];
+  var SOV_SUB=['impact','goal','outcome'];
+  function sovHtml(content){
+    var out='';
+    String(content||'').split(/\n\s*\n/).forEach(function(block){
+      var lines=block.split('\n').filter(function(l){return l.trim()!==''});
+      if(!lines.length) return;
+      var first=lines[0].trim().replace(/:$/,'');
+      var low=first.toLowerCase();
+      var head=null;
+      if(SOV_MAIN.indexOf(low)>-1||SOV_SUB.indexOf(low)>-1){ head=lines.shift(); }
+      if(head){
+        var main=SOV_MAIN.indexOf(low)>-1;
+        out+='<'+(main?'h4 class="sov-h"':'h5 class="sov-sub"')+'>'+esc(first)+'</'+(main?'h4':'h5')+'>';
+      }
+      var isGoals=low==='key goals';
+      var bullets=lines.filter(function(l){return /^\s*[-*]\s+/.test(l)});
+      var paras=lines.filter(function(l){return !/^\s*[-*]\s+/.test(l)});
+      if(isGoals&&paras.length){ bullets=bullets.concat(paras); paras=[]; }
+      if(bullets.length) out+='<ul>'+bullets.map(function(b){return '<li>'+esc(b.replace(/^\s*[-*]\s+/,''))+'</li>'}).join('')+'</ul>';
+      if(paras.length) out+='<p>'+paras.map(esc).join('<br>')+'</p>';
+    });
+    return out;
+  }
 
   function renderArtifacts(){
     var busy=!!(ui.run&&ui.run.active);
