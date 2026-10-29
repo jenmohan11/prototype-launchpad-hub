@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll } from "vitest";
 let CF: any;
-beforeAll(async () => { await import("../../public/card-folders.js"); CF = (globalThis as any).CardFolders; });
+beforeAll(async () => { // @ts-expect-error plain browser script
+  await import("../../public/card-folders.js"); CF = (globalThis as any).CardFolders; });
 describe("card folders", () => {
   it("pending only in Needs Attention", () => expect(CF.folders("pending")).toEqual(["pending"]));
   it("delayed in Decided and Delayed, never Needs Attention", () => expect(CF.folders("delayed")).toEqual(["decided", "delayed"]));
