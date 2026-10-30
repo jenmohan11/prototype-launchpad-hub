@@ -52,4 +52,14 @@ describe("card folders", () => {
     expect(CF.duplicateStamp('2026-10-30T02:51:00Z')).toBe('Oct 29, 2026, 10:51 PM ET');
     expect(CF.duplicateStamp('2026-12-01T15:00:00Z')).toBe('Dec 1, 2026, 10:00 AM ET');
   });
+  it("duplicates are capped at medium priority, never above a blocker", () => {
+    const rows = CF.fromResponse({items:[{item_key:'p',title:'Duplicate: request',priority:'high'}],decided:[{item_key:'d',decision:'duplicate',priority:'high'},{item_key:'b',decision:'accepted',priority:'high'}]});
+    expect(rows.find((r:any)=>r.item_key==='p').priority).toBe('medium');
+    expect(rows.find((r:any)=>r.item_key==='d').priority).toBe('medium');
+    expect(rows.find((r:any)=>r.item_key==='b').priority).toBe('high');
+  });
+  it("a low-priority duplicate stays low", () => {
+    const row = CF.fromResponse({items:[{item_key:'p',title:'Duplicate: request',priority:'low'}]})[0];
+    expect(row.priority).toBe('low');
+  });
 });

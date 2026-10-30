@@ -35,11 +35,16 @@
     });
     return changed;
   }
+  // Duplicates are never high priority: cap them at medium so they never outrank a blocker.
+  function capDuplicatePriority(item){
+    if(item && inFolder(item,'duplicate') && item.priority==='high') item.priority='medium';
+    return item;
+  }
   function fromResponse(response){
     var pending=Array.isArray(response.items)?response.items:[], decided=Array.isArray(response.decided)?response.decided:[];
     var keys={}; decided.forEach(function(row){ if(row && (row.item_key||row.key)) keys[String(row.item_key||row.key)]=true; });
-    return pending.filter(function(row){return row && !keys[String(row.item_key||row.key||'')];}).map(function(row){return Object.assign({},row,{status:'pending',n8nGroup:'items',decision:undefined});})
-      .concat(decided.filter(function(row){return row && typeof row==='object';}).map(function(row){return Object.assign({},row,{status:norm(row.decision||row.status),n8nGroup:'decided'});}));
+    return pending.filter(function(row){return row && !keys[String(row.item_key||row.key||'')];}).map(function(row){return capDuplicatePriority(Object.assign({},row,{status:'pending',n8nGroup:'items',decision:undefined}));})
+      .concat(decided.filter(function(row){return row && typeof row==='object';}).map(function(row){return capDuplicatePriority(Object.assign({},row,{status:norm(row.decision||row.status),n8nGroup:'decided'}));}));
   }
   function duplicateGroups(items){
     var duplicates=(items||[]).filter(function(item){return inFolder(item,'duplicate');});
@@ -49,5 +54,5 @@
     var date=new Date(iso); if(!iso || isNaN(date.getTime())) return '';
     return date.toLocaleString('en-US',{timeZone:'America/New_York',year:'numeric',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+' ET';
   }
-  root.CardFolders={norm:norm,folders:folders,inFolder:inFolder,reconcile:reconcile,fromResponse:fromResponse,duplicateGroups:duplicateGroups,duplicateStamp:duplicateStamp};
+  root.CardFolders={norm:norm,folders:folders,inFolder:inFolder,reconcile:reconcile,fromResponse:fromResponse,duplicateGroups:duplicateGroups,duplicateStamp:duplicateStamp,capDuplicatePriority:capDuplicatePriority};
 })(typeof window!=='undefined'?window:globalThis);

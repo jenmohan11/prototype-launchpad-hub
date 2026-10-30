@@ -815,6 +815,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
     var note=(ui.drafts['note:'+key]||'').trim(); if(!note) return;
     var status={accept:'accepted',reject:'rejected',delay:'delayed',duplicate:'duplicate'}[decision]; if(!status) return;
     it.status=status; it.decision=status; it.n8nGroup='decided'; delete it.reopened;
+    if(status==='duplicate') CardFolders.capDuplicatePriority(it);
     it.decision_notes=note; it.decided_by=S.project.pm; it.decided_at=new Date().toISOString();
     var fx=[];
     if(decision==='accept'&&it.type==='milestone'){
@@ -1117,11 +1118,13 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
       if(existing){ if(PrototypeFeedback.normalize(existing,S.protoComments,S.links)) notesChanged=true; return; }
       var pts=list(r.key_points);
       var src=String(r.source||'Meeting Notes'); var st=CardFolders.folders(r.status).length?CardFolders.norm(r.status):'pending';
-      S.items.unshift({key:key,project_key:r.project_key||'SCRUM',title:String(r.title||key),source:src,by:r.submitted_by||'n8n',date:String(r.source_date||'').slice(0,10)||'2026-10-16',
+      var item={key:key,project_key:r.project_key||'SCRUM',title:String(r.title||key),source:src,by:r.submitted_by||'n8n',date:String(r.source_date||'').slice(0,10)||'2026-10-16',
         type:types.indexOf(r.item_type)>-1?r.item_type:(src==='Feedback Card'?'feedback':(src==='Meeting Notes'?'requirement_change':'comment')),
         priority:prio(r),points:pts.length?pts:['(no key points)'],raw:String(r.raw_text||''),
         affected:sects(r.affected_sections),
-        change:r.proposed_change?String(r.proposed_change):'Review and decide.',impact:r.impact?String(r.impact):'Not assessed.',reason:r.attention_reason?String(r.attention_reason):'',link:r.source_link?String(r.source_link):'',sourceRef:r.source_ref?String(r.source_ref):'',clients:'',cardId:((String(r.source_ref||'').match(/launchpad-card:([^;\s]+)/)||[])[1]||undefined),status:st,n8nGroup:r.n8nGroup,decision:r.decision,decided_by:r.decided_by||undefined,decision_notes:r.decision_notes||undefined,decided_at:r.decided_at||undefined,created:new Date().toISOString()});
+        change:r.proposed_change?String(r.proposed_change):'Review and decide.',impact:r.impact?String(r.impact):'Not assessed.',reason:r.attention_reason?String(r.attention_reason):'',link:r.source_link?String(r.source_link):'',sourceRef:r.source_ref?String(r.source_ref):'',clients:'',cardId:((String(r.source_ref||'').match(/launchpad-card:([^;\s]+)/)||[])[1]||undefined),status:st,n8nGroup:r.n8nGroup,decision:r.decision,decided_by:r.decided_by||undefined,decision_notes:r.decision_notes||undefined,decided_at:r.decided_at||undefined,created:new Date().toISOString()};
+      CardFolders.capDuplicatePriority(item);
+      S.items.unshift(item);
       ui.fresh[key]=true; n++;
     });
     if(PrototypeFeedback.sync(S.items,S.protoComments,S.links)) notesChanged=true;
