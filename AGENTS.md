@@ -1,4 +1,5 @@
 # AGENTS
+- Prototype manual n8n actions and operational-message visibility use public/n8n-visibility.js at rendering and event boundaries; automatic project sync and feedback delivery remain separate so stakeholder workflows keep working. These personas are presentation controls, not authenticated server authorization.
 - Prototype feedback provenance and import corrections live in public/prototype-feedback.js; retain the submission ID through n8n and project prototype comments into Stakeholder Feedback without duplicating stored cards.
 - Meeting note source merging lives in public/meeting-notes.js and runs before approval deduplication; one document can produce many approvals but must remain one repository entry.
 - The one-master-requirements-doc rule lives in public/requirements-docs.js (ReqDocs.canAddReqDoc); the prototype enforces it in the add form, the form handler, and the Confluence simulation, and deleting the linked doc re-enables adding.
