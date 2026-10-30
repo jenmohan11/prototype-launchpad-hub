@@ -1,4 +1,5 @@
 # AGENTS
+- Card folder membership and duplicate grouping use public/card-folders.js; rebuild cards from each launchpad-items response with items/decided provenance so counts never come from saved cards.
 - Prototype manual n8n actions and operational-message visibility use public/n8n-visibility.js at rendering and event boundaries; automatic project sync and feedback delivery remain separate so stakeholder workflows keep working. These personas are presentation controls, not authenticated server authorization.
 - Prototype feedback provenance and import corrections live in public/prototype-feedback.js; retain the submission ID through n8n and project prototype comments into Stakeholder Feedback without duplicating stored cards.
 - Meeting note source merging lives in public/meeting-notes.js and runs before approval deduplication; one document can produce many approvals but must remain one repository entry.

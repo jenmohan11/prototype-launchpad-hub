@@ -7,9 +7,13 @@
     if(s==='delayed') return ['decided','delayed'];
     if(s==='accepted') return ['decided','accepted'];
     if(s==='rejected') return ['decided','rejected'];
+    if(s==='duplicate') return ['decided','duplicate'];
     return [];
   }
   function inFolder(item,folder){
+    if(folder==='duplicate') return (item.n8nGroup==='decided' && item.decision==='duplicate') || (item.n8nGroup==='items' && item.status==='pending' && !item.stale && String(item.title||'').startsWith('Duplicate: '));
+    if(folder==='pending' && item.n8nGroup==='decided') return false;
+    if(folder==='decided' && item.n8nGroup==='decided') return true;
     if(folder==='pending' && item.stale) return false;
     return folders(item.status).indexOf(folder)>-1;
   }
@@ -31,5 +35,19 @@
     });
     return changed;
   }
-  root.CardFolders={norm:norm,folders:folders,inFolder:inFolder,reconcile:reconcile};
+  function fromResponse(response){
+    var pending=Array.isArray(response.items)?response.items:[], decided=Array.isArray(response.decided)?response.decided:[];
+    var keys={}; decided.forEach(function(row){ if(row && (row.item_key||row.key)) keys[String(row.item_key||row.key)]=true; });
+    return pending.filter(function(row){return row && !keys[String(row.item_key||row.key||'')];}).map(function(row){return Object.assign({},row,{status:'pending',n8nGroup:'items',decision:undefined});})
+      .concat(decided.filter(function(row){return row && typeof row==='object';}).map(function(row){return Object.assign({},row,{status:norm(row.decision||row.status),n8nGroup:'decided'});}));
+  }
+  function duplicateGroups(items){
+    var duplicates=(items||[]).filter(function(item){return inFolder(item,'duplicate');});
+    return {pending:duplicates.filter(function(item){return item.status==='pending';}),decided:duplicates.filter(function(item){return item.n8nGroup==='decided';}),total:duplicates.length};
+  }
+  function duplicateStamp(iso){
+    var date=new Date(iso); if(!iso || isNaN(date.getTime())) return '';
+    return date.toLocaleString('en-US',{timeZone:'America/New_York',year:'numeric',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+' ET';
+  }
+  root.CardFolders={norm:norm,folders:folders,inFolder:inFolder,reconcile:reconcile,fromResponse:fromResponse,duplicateGroups:duplicateGroups,duplicateStamp:duplicateStamp};
 })(typeof window!=='undefined'?window:globalThis);
