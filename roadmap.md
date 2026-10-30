@@ -1,3 +1,4 @@
+- Duplicate folder, live n8n counts, decision details and immediate Duplicate action — in progress
 - Delete requirements docs (PM or the person who added it; reverts status/progress and logs the deletion) — done; verified add+delete in preview
 - Restrict manual n8n controls to PM/Admin and hide operational messaging from Business — done; 17 tests passed, Business/Dev views checked, PM live connection test succeeded
 - One master requirements doc only; add form locks while a doc is linked and returns after deletion — done; tested rule and verified in preview
