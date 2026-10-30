@@ -1,4 +1,5 @@
 - Delete requirements docs (PM or the person who added it; reverts status/progress and logs the deletion) — done; verified add+delete in preview
+- Restrict manual n8n controls to PM/Admin and hide operational messaging from Business — in progress
 - One master requirements doc only; add form locks while a doc is linked and returns after deletion — done; tested rule and verified in preview
 - Server-side n8n proxy (no key in browser) — done
 - Keep Kickoff sync and all meeting notes inside a compact central repository — done; verified search, opening a note and reload
