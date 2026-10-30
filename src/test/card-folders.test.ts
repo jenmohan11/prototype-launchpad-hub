@@ -22,4 +22,34 @@ describe("card folders", () => {
     CF.reconcile(items, [{ item_key: "a", status: "delayed" }]);
     expect(CF.inFolder(items[0], "pending")).toBe(true);
   });
+  it("decided duplicates stay in Decided and never Needs Attention", () => {
+    const rows = CF.fromResponse({items:[{item_key:'d',title:'Duplicate: same'}],decided:[{item_key:'d',decision:'duplicate'}]});
+    expect(rows).toHaveLength(1);
+    expect(CF.inFolder(rows[0],'duplicate')).toBe(true);
+    expect(CF.inFolder(rows[0],'decided')).toBe(true);
+    expect(CF.inFolder(rows[0],'pending')).toBe(false);
+  });
+  it("pending Duplicate: cards stay in Needs Attention and count with marked duplicates", () => {
+    const rows = CF.fromResponse({items:[{item_key:'p',title:'Duplicate: request'},{item_key:'n',title:'Not Duplicate: request'},{item_key:'c',title:'duplicate: request'}],decided:[{item_key:'d',decision:'duplicate'},{item_key:'a',decision:'accepted',title:'Duplicate: accepted'}]});
+    const groups = CF.duplicateGroups(rows);
+    expect(groups.total).toBe(2);
+    expect(groups.pending.map((r:any)=>r.item_key)).toEqual(['p']);
+    expect(groups.decided.map((r:any)=>r.item_key)).toEqual(['d']);
+    expect(CF.inFolder(groups.pending[0],'pending')).toBe(true);
+  });
+  it("recalculates duplicates from the latest response, not saved or sample cards", () => {
+    expect(CF.duplicateGroups([{title:'Duplicate: local',status:'pending'},{status:'duplicate'}]).total).toBe(0);
+    expect(CF.duplicateGroups(CF.fromResponse({items:[],decided:[]})).total).toBe(0);
+  });
+  it("marking a live pending card duplicate immediately moves it into both folders", () => {
+    const row = CF.fromResponse({items:[{item_key:'x',title:'Request'}]})[0];
+    Object.assign(row,{status:'duplicate',decision:'duplicate',n8nGroup:'decided'});
+    expect(CF.inFolder(row,'pending')).toBe(false);
+    expect(CF.inFolder(row,'decided')).toBe(true);
+    expect(CF.duplicateGroups([row]).total).toBe(1);
+  });
+  it("formats decided_at in Eastern Time, not the browser timezone", () => {
+    expect(CF.duplicateStamp('2026-10-30T02:51:00Z')).toBe('Oct 29, 2026, 10:51 PM ET');
+    expect(CF.duplicateStamp('2026-12-01T15:00:00Z')).toBe('Dec 1, 2026, 10:00 AM ET');
+  });
 });

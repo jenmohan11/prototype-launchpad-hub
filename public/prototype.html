@@ -148,6 +148,9 @@ ul.plain li{padding:6px 0;border-bottom:1px solid var(--line);display:flex;gap:8
 .item-top:hover{background:var(--surface-2)}
 .item-title{font-weight:600}
 .item-sub{font-size:12.5px;color:var(--muted)}
+.pill.duplicate{background:var(--surface-2);color:var(--muted);border-color:var(--line)}
+.duplicate-details{display:block;margin-top:6px;overflow-wrap:anywhere}
+.duplicate-group{margin:18px 4px 6px;font-size:14px}
 .item-body{padding:4px 4px 18px 4px;display:grid;grid-template-columns:1.3fr 1fr;gap:20px}
 .item-body h4{font-family:var(--font-mono);font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin:0 0 6px;font-weight:500}
 .item-body ul{margin:0;padding-left:18px}
@@ -439,9 +442,9 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
     var c=ncfg(); if(!nconnected()) return;
     ui.nbusy=true; renderMonitor();
     try{ var j=await nfetch(nurl(nep('items'),{project_key:S.project.jira||'SCRUM',key:c.key}));
-      applySprint(j); applySections(j); renderArtifacts(); var pend=Array.isArray(j)?j:(j.items||j.data||j.rows||[]); var dec=Array.isArray(j.decided)?j.decided:[]; var decKeys={}; dec.forEach(function(d){ if(d&&d.item_key) decKeys[d.item_key]=1; });
-      var rows=pend.filter(function(r){return r&&!decKeys[r.item_key];}).map(function(r){return Object.assign({},r,{status:'pending'});}).concat(dec.map(function(d){return Object.assign({},d,{status:d.decision||d.status});}));
-      S.items=[]; liveLoaded=true; console.log('[n8n] rendering',rows.length,'item(s)'); ui.nNeedKey=false; ui.tab='pending'; ui.filter='all'; importRows(rows,'n8n sync',true); await nState(true); ui.nstatus='Synced '+new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})+'. '+pend.length+' pending in n8n.';
+      applySprint(j); applySections(j); renderArtifacts(); var pend=Array.isArray(j.items)?j.items:[];
+      var rows=CardFolders.fromResponse(j);
+      S.items=[]; liveLoaded=true; console.log('[n8n] rendering',rows.length,'item(s)'); ui.nNeedKey=false; ui.filter='all'; importRows(rows,'n8n sync',true); await nState(true); ui.nstatus='Synced '+new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})+'. '+pend.length+' pending in n8n.';
     }catch(e){ ui.nstatus=nerr(e); toast(can.n8nMessages()?nerr(e):'Project updates could not be loaded. Please try again later.'); }
     ui.nbusy=false; renderMonitor(); if(ui.drawerOpen) renderDrawer();
   }
@@ -608,20 +611,20 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
     var open=ui.expanded===it.key;
     var head='<button class="item-top" type="button" data-action="toggle-item" data-key="'+esc(it.key)+'" aria-expanded="'+open+'">'+
       '<span class="pill '+it.type+'">'+esc(typeLabel(it))+'</span>'+
-      '<span><span class="item-title">'+esc(it.title)+'</span><br><span class="item-sub">'+esc(it.source)+' · '+esc(it.by)+' · '+fmtDay(it.date)+(it.clients?' · '+esc(it.clients):'')+'</span><br><span class="item-sub">'+esc(it.reason||'')+'</span></span>'+
-      '<span class="row" style="justify-content:flex-end">'+(ui.fresh[it.key]?'<span class="pill fresh">New</span>':'')+'<span class="pill plain">'+esc(it.priority)+'</span></span></button>';
+      '<span><span class="item-title">'+esc(it.title)+'</span><br><span class="item-sub">'+esc(it.source)+' · '+esc(it.by)+' · '+fmtDay(it.date)+(it.clients?' · '+esc(it.clients):'')+'</span><br><span class="item-sub">'+esc(it.reason||'')+'</span>'+(it.n8nGroup==='decided'&&it.decision==='duplicate'?'<span class="item-sub duplicate-details">'+esc(it.decided_by||'')+' · '+esc(CardFolders.duplicateStamp(it.decided_at))+(it.decision_notes?'<br>'+esc(it.decision_notes):'')+'</span>':'')+'</span>'+
+      '<span class="row" style="justify-content:flex-end">'+(CardFolders.inFolder(it,'duplicate')?'<span class="pill plain duplicate">Duplicate</span>':'')+(ui.fresh[it.key]?'<span class="pill fresh">New</span>':'')+'<span class="pill plain">'+esc(it.priority)+'</span></span></button>';
     if(!open) return '<div class="item">'+head+'</div>';
     var chips=SECTIONS.filter(function(s){return it.affected.indexOf(s)>-1 || can.approve()}).map(function(s){
       var on=it.affected.indexOf(s)>-1; return '<button class="chip" type="button" data-action="toggle-section" data-key="'+esc(it.key)+'" data-s="'+esc(s)+'" aria-pressed="'+on+'" '+(can.approve()&&it.status==='pending'?'':'disabled')+'>'+esc(s)+'</button>'; }).join(' ');
     var note=ui.drafts['note:'+it.key]||'';
     var decision;
     if(it.status!=='pending'){
-      decision='<div class="decision"><h4>Decision</h4><p><b>'+({accepted:'Accepted',rejected:'Rejected',delayed:'Delayed'}[it.status])+'</b> by '+esc(it.decided_by||'PM')+' on '+esc(fmtStamp(it.decided_at))+'</p><p class="muted" style="margin-top:4px">'+esc(it.decision_notes||'')+'</p>'+
+      decision='<div class="decision"><h4>Decision</h4><p><b>'+({accepted:'Accepted',rejected:'Rejected',delayed:'Delayed',duplicate:'Duplicate'}[it.status]||it.status)+'</b> by '+esc(it.decided_by||'PM')+' on '+esc(it.status==='duplicate'?CardFolders.duplicateStamp(it.decided_at):fmtStamp(it.decided_at))+'</p><p class="muted" style="margin-top:4px">'+esc(it.decision_notes||'')+'</p>'+
         (can.n8nMessages()&&nconnected()&&it.n8n?'<p class="note-small" style="margin-top:6px">'+({sending:'Recording in n8n...',ok:'Recorded in the n8n Action Items table.',missing:'Not found in the n8n table (sample item), so only the page was updated.',failed:'Saved on the page, but n8n was not updated. '+esc(it.n8nErr||'')+(can.n8n()?' <button class="btn small" type="button" data-action="n8n-retry" data-key="'+esc(it.key)+'">Retry</button>':'')})[it.n8n]+'</p>':'')+
         (can.approve()?'<button class="btn small" style="margin-top:8px" type="button" data-action="reopen" data-key="'+esc(it.key)+'">'+(it.status==='delayed'?'Move back to needs attention':'Change this decision')+'</button>':'')+'</div>';
     } else if(can.approve()){
       decision='<div class="decision"><h4>Your decision</h4><label for="note-'+esc(it.key)+'">Note (required for every decision)</label><textarea id="note-'+esc(it.key)+'" data-draft="note:'+esc(it.key)+'" placeholder="Good idea, but we cannot integrate with company X in time for the MVP.">'+esc(note)+'</textarea>'+
-        '<div class="row" style="margin-top:8px"><button class="btn ok" type="button" data-decide="accept" data-key="'+esc(it.key)+'" '+(note.trim()?'':'disabled')+'>Accept</button><button class="btn warn" type="button" data-decide="delay" data-key="'+esc(it.key)+'" '+(note.trim()?'':'disabled')+'>Delay</button><button class="btn crit" type="button" data-decide="reject" data-key="'+esc(it.key)+'" '+(note.trim()?'':'disabled')+'>Reject</button></div>'+
+        '<div class="row" style="margin-top:8px"><button class="btn ok" type="button" data-decide="accept" data-key="'+esc(it.key)+'" '+(note.trim()?'':'disabled')+'>Accept</button><button class="btn warn" type="button" data-decide="delay" data-key="'+esc(it.key)+'" '+(note.trim()?'':'disabled')+'>Delay</button><button class="btn crit" type="button" data-decide="reject" data-key="'+esc(it.key)+'" '+(note.trim()?'':'disabled')+'>Reject</button><button class="btn" type="button" data-decide="duplicate" data-key="'+esc(it.key)+'" '+(note.trim()?'':'disabled')+'>Duplicate</button></div>'+
         '<p class="note-small" style="margin-top:8px">Accept tells the orchestrator to apply the proposed change. Nothing changes before you click.</p></div>';
     } else {
       decision='<div class="decision"><h4>Waiting for the PM</h4><p class="muted">Only the Admin (PM) can accept, reject or delay. Switch to Admin in Settings to try the decision flow.</p></div>';
@@ -635,7 +638,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
   }
 
   function renderMonitor(){
-    var c=counts(), sum=summaryText();
+    var c=counts(), sum=summaryText(), duplicates=CardFolders.duplicateGroups(S.items);
     var list;
     if(ui.tab==='pending') list=sortItems(pending()); else if(ui.tab==='delayed'||ui.tab==='accepted'||ui.tab==='rejected') list=sortItems(S.items.filter(function(i){return CardFolders.inFolder(i,ui.tab)})); else list=S.items.filter(function(i){return CardFolders.inFolder(i,'decided')}).sort(function(a,b){return (b.decided_at||'')>(a.decided_at||'')?1:-1});
     if(ui.tab==='pending' && ui.filter!=='all') list=list.filter(function(i){return i.type===ui.filter});
@@ -658,9 +661,9 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
 
       (ui.importOpen&&can.approve()?'<div class="decision" style="margin-top:12px"><label for="imp">Paste rows exported from the n8n "Action Items" data table (JSON array)</label><textarea id="imp" data-draft="import" placeholder=\'[{"item_key":"...","title":"...","status":"pending", ...}]\'>'+esc(ui.drafts.import||'')+'</textarea><div class="row" style="margin-top:8px"><button class="btn primary small" type="button" data-action="import-go">Add to queue</button></div></div>':'')+
       run+
-      '<div class="tabs" role="tablist">'+[['pending','Needs attention ('+pending().length+')'],['delayed','Delayed ('+c.delayed+')'],['decided','Decided ('+c.decided+')'],['accepted','Accepted ('+S.items.filter(function(i){return CardFolders.inFolder(i,'accepted')}).length+')'],['rejected','Rejected ('+S.items.filter(function(i){return CardFolders.inFolder(i,'rejected')}).length+')']].map(function(t){return '<button role="tab" type="button" data-action="tab" data-v="'+t[0]+'" aria-selected="'+(ui.tab===t[0])+'">'+t[1]+'</button>'}).join('')+'</div>'+
+      '<div class="tabs" role="tablist">'+[['pending','Needs attention ('+pending().length+')'],['delayed','Delayed ('+c.delayed+')'],['decided','Decided ('+c.decided+')'],['accepted','Accepted ('+S.items.filter(function(i){return CardFolders.inFolder(i,'accepted')}).length+')'],['rejected','Rejected ('+S.items.filter(function(i){return CardFolders.inFolder(i,'rejected')}).length+')'],['duplicate','Duplicate ('+duplicates.total+')']].map(function(t){return '<button role="tab" type="button" data-action="tab" data-v="'+t[0]+'" aria-selected="'+(ui.tab===t[0])+'">'+t[1]+'</button>'}).join('')+'</div>'+
       (ui.tab==='pending'?'<div class="filters" role="group" aria-label="Filter">'+flt.map(function(f){return '<button class="chip" type="button" data-action="filter" data-v="'+f[0]+'" aria-pressed="'+(ui.filter===f[0])+'">'+esc(f[1])+'</button>'}).join('')+'</div>':'<div style="height:8px"></div>')+
-      '<div class="items">'+(list.length? list.map(itemRow).join('') : '<div class="empty">'+(ui.tab==='pending'?'Nothing matches this filter. Add meeting notes under Artifacts to see the agents propose updates.':'Nothing here yet.')+'</div>')+'</div>';
+      '<div class="items">'+(ui.tab==='duplicate'?'<h3 class="duplicate-group">Awaiting decision ('+duplicates.pending.length+')</h3>'+sortItems(duplicates.pending).map(itemRow).join('')+'<h3 class="duplicate-group">Marked duplicate ('+duplicates.decided.length+')</h3>'+duplicates.decided.slice().sort(function(a,b){return (b.decided_at||'').localeCompare(a.decided_at||'');}).map(itemRow).join(''):(list.length? list.map(itemRow).join('') : '<div class="empty">'+(ui.tab==='pending'?'Nothing matches this filter. Add meeting notes under Artifacts to see the agents propose updates.':'Nothing here yet.')+'</div>'))+'</div>';
   }
 
   function renderSlack(){
@@ -810,7 +813,8 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
     var it=S.items.find(function(i){return i.key===key});
     if(!it||!can.approve()||it.status!=='pending') return;
     var note=(ui.drafts['note:'+key]||'').trim(); if(!note) return;
-    it.status={accept:'accepted',reject:'rejected',delay:'delayed'}[decision]; delete it.reopened;
+    var status={accept:'accepted',reject:'rejected',delay:'delayed',duplicate:'duplicate'}[decision]; if(!status) return;
+    it.status=status; it.decision=status; it.n8nGroup='decided'; delete it.reopened;
     it.decision_notes=note; it.decided_by=S.project.pm; it.decided_at=new Date().toISOString();
     var fx=[];
     if(decision==='accept'&&it.type==='milestone'){
@@ -829,9 +833,10 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
     }
     logEntry({kind:decision,title:it.title,note:note,effects:fx,key:key});
     delete ui.drafts['note:'+key]; delete ui.fresh[key]; ui.expanded=null;
+    if(decision==='duplicate') ui.tab='duplicate';
     save(); renderAll();
-    toast(({accept:'Accepted. ',reject:'Rejected. ',delay:'Delayed. '})[decision]+(fx.length?fx.join('; ')+'.':'Logged in the Change Log.'));
-    if(nconnected()) nDecision(it,it.status);
+    toast(({accept:'Accepted. ',reject:'Rejected. ',delay:'Delayed. ',duplicate:'Marked duplicate. '})[decision]+(fx.length?fx.join('; ')+'.':'Logged in the Change Log.'));
+    if(nconnected()) nDecision(it,it.status).then(function(result){if(decision==='duplicate'&&result==='ok') return nSync();});
   }
 
   /* ---------- agent pipeline ---------- */
@@ -985,7 +990,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
     }
     else if(act==='art'){ ui.open[a.dataset.id]=!ui.open[a.dataset.id]; renderArtifacts(); }
     else if(act==='fbtab'){ ui.fbTab=v; renderArtifacts(); }
-    else if(act==='reopen'){ var r=S.items.find(function(i){return i.key===key}); if(r&&can.approve()){ var was=r.status, fx2=[]; if(was==='accepted'&&r.undo){ if(r.undo.dp){ S.progress=Math.max(0,S.progress-r.undo.dp); fx2.push('Progress back to '+S.progress+'%'); } if(r.undo.reqDraft){ S.reqDraft=false; fx2.push('Reqs draft done undone'); } if(r.undo.req){ S.requirements=S.requirements.filter(function(q){return q.from!==r.key}); fx2.push('Requirement removed'); } if(r.undo.removedReqs){ S.requirements=S.requirements.concat(r.undo.removedReqs); delete r.removed_requirements; fx2.push('Requirement restored'); } } delete r.undo; r.status='pending'; r.reopened=true; delete r.stale; delete r.decision_notes; delete r.decided_by; delete r.decided_at; if(nconnected()) nDecision(r,'pending'); logEntry({kind:'reopen',title:r.title,note:(was==='delayed'?'Moved back to needs attention.':'Decision changed: was '+was+', moved back for a new decision.'),effects:fx2}); ui.tab='pending'; ui.expanded=r.key; save(); renderAll(); } }
+    else if(act==='reopen'){ var r=S.items.find(function(i){return i.key===key}); if(r&&can.approve()){ var was=r.status, fx2=[]; if(was==='accepted'&&r.undo){ if(r.undo.dp){ S.progress=Math.max(0,S.progress-r.undo.dp); fx2.push('Progress back to '+S.progress+'%'); } if(r.undo.reqDraft){ S.reqDraft=false; fx2.push('Reqs draft done undone'); } if(r.undo.req){ S.requirements=S.requirements.filter(function(q){return q.from!==r.key}); fx2.push('Requirement removed'); } if(r.undo.removedReqs){ S.requirements=S.requirements.concat(r.undo.removedReqs); delete r.removed_requirements; fx2.push('Requirement restored'); } } delete r.undo; r.status='pending'; r.n8nGroup='items'; delete r.decision; r.reopened=true; delete r.stale; delete r.decision_notes; delete r.decided_by; delete r.decided_at; if(nconnected()) nDecision(r,'pending'); logEntry({kind:'reopen',title:r.title,note:(was==='delayed'?'Moved back to needs attention.':'Decision changed: was '+was+', moved back for a new decision.'),effects:fx2}); ui.tab='pending'; ui.expanded=r.key; save(); renderAll(); } }
     else if(act==='sample-note'){ ui.drafts.mnTitle=SAMPLE_NOTE.title; ui.drafts.mnDate=SAMPLE_NOTE.date; ui.drafts.mnText=SAMPLE_NOTE.text; renderArtifacts(); }
     else if(act==='sim-confluence'){ if(ui.run&&ui.run.active) return; if(!ReqDocs.canAddReqDoc(S.reqDocs)){ toast('A requirements doc is already linked. Delete it before adding another.'); return; } var cd={id:'d'+Date.now(),title:'Reporting Manager requirements (Confluence page)',url:'',by:'Confluence Agent',date:'2026-10-19'}; S.reqDocs=S.reqDocs||[]; S.reqDocs.unshift(cd); ui.open.req=true; save(); renderArtifacts(); proposeReqMilestone(cd,true).then(scrollToMonitor); }
     else if(act==='goto-links'){ ui.open.prototype=true; renderArtifacts(); var t2=$('#art-prototype'); if(t2) t2.scrollIntoView({block:'center'}); }
@@ -1116,7 +1121,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
         type:types.indexOf(r.item_type)>-1?r.item_type:(src==='Feedback Card'?'feedback':(src==='Meeting Notes'?'requirement_change':'comment')),
         priority:prio(r),points:pts.length?pts:['(no key points)'],raw:String(r.raw_text||''),
         affected:sects(r.affected_sections),
-        change:r.proposed_change?String(r.proposed_change):'Review and decide.',impact:r.impact?String(r.impact):'Not assessed.',reason:r.attention_reason?String(r.attention_reason):'',link:r.source_link?String(r.source_link):'',sourceRef:r.source_ref?String(r.source_ref):'',clients:'',cardId:((String(r.source_ref||'').match(/launchpad-card:([^;\s]+)/)||[])[1]||undefined),status:st,decided_by:r.decided_by||undefined,decision_notes:r.decision_notes||undefined,decided_at:r.decided_at||undefined,created:new Date().toISOString()});
+        change:r.proposed_change?String(r.proposed_change):'Review and decide.',impact:r.impact?String(r.impact):'Not assessed.',reason:r.attention_reason?String(r.attention_reason):'',link:r.source_link?String(r.source_link):'',sourceRef:r.source_ref?String(r.source_ref):'',clients:'',cardId:((String(r.source_ref||'').match(/launchpad-card:([^;\s]+)/)||[])[1]||undefined),status:st,n8nGroup:r.n8nGroup,decision:r.decision,decided_by:r.decided_by||undefined,decision_notes:r.decision_notes||undefined,decided_at:r.decided_at||undefined,created:new Date().toISOString()});
       ui.fresh[key]=true; n++;
     });
     if(PrototypeFeedback.sync(S.items,S.protoComments,S.links)) notesChanged=true;
