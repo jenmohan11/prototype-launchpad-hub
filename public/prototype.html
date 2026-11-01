@@ -822,7 +822,7 @@ blockquote{margin:6px 0 0;padding:8px 10px;border-left:2px solid var(--line);col
       var b0=S.progress; S.reqDraft=true; S.progress=Math.max(S.progress,35); it.undo={dp:S.progress-b0,reqDraft:true};
       fx.push('Pad status: Reqs draft done'+(S.progress!==b0?' (progress '+b0+'% to '+S.progress+'%)':''),'Summary regenerated');
     } else if(decision==='accept'){
-      var cap=S.reqDone?95:49;
+      var cap=S.reqDone?95:50;
       if(S.progress<cap){ var b=S.progress; S.progress=Math.min(cap,S.progress+5); it.undo=it.undo||{}; it.undo.dp=S.progress-b; fx.push('Progress '+b+'% to '+S.progress+'%'); }
       if(!S.reqDraft&&/requirement/i.test((it.title||'')+' '+(it.source||'')+' '+(it.change||''))&&/draft|doc|page|live|publish|ready|complete/i.test((it.title||'')+' '+(it.change||''))){ S.reqDraft=true; it.undo=it.undo||{}; it.undo.reqDraft=true; fx.push('Pad status: Reqs draft live','Summary regenerated'); }
       if(it.affected.indexOf('Requirements')>-1){ S.requirements.push({id:'R-'+(S.requirements.length+1),text:it.change,from:it.key,sync:'queued'}); it.undo=it.undo||{}; it.undo.req=true; fx.push('Requirement added, Confluence write-back queued'); }
